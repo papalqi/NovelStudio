@@ -52,12 +52,25 @@ export const Explorer = ({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ChapterStatus | 'all'>('all')
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [collapsedVolumes, setCollapsedVolumes] = useState<Set<string>>(new Set())
 
   // Context menu states
   const volumeMenu = useContextMenu()
   const chapterMenu = useContextMenu()
   const [activeVolumeForMenu, setActiveVolumeForMenu] = useState<string>('')
   const [activeChapterForMenu, setActiveChapterForMenu] = useState<string>('')
+
+  const toggleVolumeCollapse = (volumeId: string) => {
+    setCollapsedVolumes((prev) => {
+      const next = new Set(prev)
+      if (next.has(volumeId)) {
+        next.delete(volumeId)
+      } else {
+        next.add(volumeId)
+      }
+      return next
+    })
+  }
 
   // Rename modal state
   const [renameTarget, setRenameTarget] = useState<RenameTarget>(null)
@@ -195,66 +208,74 @@ export const Explorer = ({
       <div className="tree">
         {volumes
           .sort((a, b) => a.orderIndex - b.orderIndex)
-          .map((volume) => (
-            <div key={volume.id} className="tree-group">
-              <div
-                className="tree-group-title"
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  setActiveVolumeForMenu(volume.id)
-                  volumeMenu.openMenu(e)
-                }}
-              >
-                <button
-                  className={activeVolumeId === volume.id ? 'active' : ''}
-                  onClick={() => onSelectVolume(volume.id)}
-                  data-testid={`explorer-volume-${volume.id}`}
+          .map((volume) => {
+            const isCollapsed = collapsedVolumes.has(volume.id)
+            return (
+              <div key={volume.id} className="tree-group">
+                <div
+                  className="tree-group-title"
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    setActiveVolumeForMenu(volume.id)
+                    volumeMenu.openMenu(e)
+                  }}
                 >
-                  <span className="tree-icon">▸</span>
-                  {volume.title}
-                </button>
-              </div>
-              <div className="tree-children">
-                {filteredChapters
-                  .filter((chapter) => chapter.volumeId === volume.id)
-                  .sort((a, b) => a.orderIndex - b.orderIndex)
-                  .map((chapter) => (
-                    <div
-                      key={chapter.id}
-                      className={`tree-item ${activeChapterId === chapter.id ? 'selected' : ''}`}
-                      onClick={() => onSelectChapter(chapter.id)}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        setActiveChapterForMenu(chapter.id)
-                        chapterMenu.openMenu(e)
-                      }}
-                      draggable
-                      onDragStart={() => setDraggingId(chapter.id)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => handleDrop(volume.id, chapter.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          onSelectChapter(chapter.id)
-                        }
-                      }}
-                      data-testid={`explorer-chapter-${chapter.id}`}
-                    >
-                      <span className={`status-dot status-${chapter.status}`} />
-                      <span className="tree-item-title">{chapter.title}</span>
-                      <span className="tree-meta">
-                        {chapter.wordCount}字 · {statusLabels[chapter.status]}
-                      </span>
-                    </div>
-                  ))}
-                {filteredChapters.filter((chapter) => chapter.volumeId === volume.id).length === 0 && (
-                  <div className="empty-state">暂无章节</div>
+                  <button
+                    className={activeVolumeId === volume.id ? 'active' : ''}
+                    onClick={() => {
+                      toggleVolumeCollapse(volume.id)
+                      onSelectVolume(volume.id)
+                    }}
+                    data-testid={`explorer-volume-${volume.id}`}
+                  >
+                    <span className={`tree-icon ${isCollapsed ? '' : 'expanded'}`}>▸</span>
+                    {volume.title}
+                  </button>
+                </div>
+                {!isCollapsed && (
+                  <div className="tree-children">
+                    {filteredChapters
+                      .filter((chapter) => chapter.volumeId === volume.id)
+                      .sort((a, b) => a.orderIndex - b.orderIndex)
+                      .map((chapter) => (
+                        <div
+                          key={chapter.id}
+                          className={`tree-item ${activeChapterId === chapter.id ? 'selected' : ''}`}
+                          onClick={() => onSelectChapter(chapter.id)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setActiveChapterForMenu(chapter.id)
+                            chapterMenu.openMenu(e)
+                          }}
+                          draggable
+                          onDragStart={() => setDraggingId(chapter.id)}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => handleDrop(volume.id, chapter.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              onSelectChapter(chapter.id)
+                            }
+                          }}
+                          data-testid={`explorer-chapter-${chapter.id}`}
+                        >
+                          <span className={`status-dot status-${chapter.status}`} />
+                          <span className="tree-item-title">{chapter.title}</span>
+                          <span className="tree-meta">
+                            {chapter.wordCount}字 · {statusLabels[chapter.status]}
+                          </span>
+                        </div>
+                      ))}
+                    {filteredChapters.filter((chapter) => chapter.volumeId === volume.id).length === 0 && (
+                      <div className="empty-state">暂无章节</div>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
       </div>
 
       {/* Volume Context Menu */}
