@@ -114,7 +114,7 @@ test('settings panel saves and persists', async ({ page }) => {
   })
 })
 
-test('knowledge base drawer create note persists', async ({ page }) => {
+test('knowledge base page create note persists', async ({ page }) => {
   await page.goto('/')
   await waitForExplorer(page)
 
@@ -124,8 +124,8 @@ test('knowledge base drawer create note persists', async ({ page }) => {
     api: { url: '/api/notes', method: 'POST' },
     action: async () => {
       await page.getByTestId('topbar-knowledge-base').click()
-      await page.getByTestId('knowledge-new-title').fill(noteTitle)
-      await page.getByTestId('knowledge-add').click()
+      await page.getByTestId('knowledge-page-new-title').fill(noteTitle)
+      await page.getByTestId('knowledge-page-add').click()
     },
     ui: async () => {
       await expect(page.getByText(noteTitle)).toBeVisible()
@@ -185,12 +185,38 @@ test('AI settings persist after save', async ({ page }) => {
   await page.getByTestId('topbar-settings').click()
   await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
 
+  await page.getByTestId('settings-nav-agent').click()
+  await page.getByTestId('settings-agent-serial-agent-default').check()
+  await page.getByTestId('settings-agent-serial-order-agent-default').fill('2')
+  const schemaText = '{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}'
+  await page.getByTestId('settings-agent-schema-agent-default').fill(schemaText)
+
   await page.getByTestId('settings-nav-ai').click()
 
   const temperatureInput = page.getByTestId('settings-ai-temperature')
   const currentValue = await temperatureInput.inputValue()
   const nextValue = (Number(currentValue || '0') + 0.1).toFixed(1)
   await temperatureInput.fill(nextValue)
+
+  const timeoutInput = page.getByTestId('settings-ai-timeout')
+  const timeoutValue = Number(await timeoutInput.inputValue() || '0') + 500
+  await timeoutInput.fill(String(timeoutValue))
+
+  const maxRetriesInput = page.getByTestId('settings-ai-max-retries')
+  const maxRetriesValue = Number(await maxRetriesInput.inputValue() || '0') + 1
+  await maxRetriesInput.fill(String(maxRetriesValue))
+
+  const retryDelayInput = page.getByTestId('settings-ai-retry-delay')
+  const retryDelayValue = Number(await retryDelayInput.inputValue() || '0') + 100
+  await retryDelayInput.fill(String(retryDelayValue))
+
+  const maxConcurrencyInput = page.getByTestId('settings-ai-max-concurrency')
+  const maxConcurrencyValue = Math.max(1, Number(await maxConcurrencyInput.inputValue() || '1'))
+  await maxConcurrencyInput.fill(String(maxConcurrencyValue))
+
+  const rateLimitInput = page.getByTestId('settings-ai-rate-limit')
+  const rateLimitValue = Number(await rateLimitInput.inputValue() || '0') + 10
+  await rateLimitInput.fill(String(rateLimitValue))
 
   await withRealFeedback(page, {
     api: { url: '/api/settings', method: 'PUT' },
@@ -203,9 +229,19 @@ test('AI settings persist after save', async ({ page }) => {
     persist: async () => {
       await waitForExplorer(page)
       await page.getByTestId('topbar-settings').click()
+      await page.getByTestId('settings-nav-agent').click()
+      await expect(page.getByTestId('settings-agent-serial-agent-default')).toBeChecked()
+      await expect(page.getByTestId('settings-agent-serial-order-agent-default')).toHaveValue('2')
+      await expect(page.getByTestId('settings-agent-schema-agent-default')).toHaveValue(schemaText)
+
       await page.getByTestId('settings-nav-ai').click()
       const persistedValue = await page.getByTestId('settings-ai-temperature').inputValue()
       expect(Number(persistedValue)).toBeCloseTo(Number(nextValue), 1)
+      await expect(page.getByTestId('settings-ai-timeout')).toHaveValue(String(timeoutValue))
+      await expect(page.getByTestId('settings-ai-max-retries')).toHaveValue(String(maxRetriesValue))
+      await expect(page.getByTestId('settings-ai-retry-delay')).toHaveValue(String(retryDelayValue))
+      await expect(page.getByTestId('settings-ai-max-concurrency')).toHaveValue(String(maxConcurrencyValue))
+      await expect(page.getByTestId('settings-ai-rate-limit')).toHaveValue(String(rateLimitValue))
     }
   })
 })

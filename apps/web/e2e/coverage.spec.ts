@@ -338,8 +338,8 @@ test('knowledge base and settings coverage', async ({ page }) => {
     api: { url: '/api/notes', method: 'POST' },
     action: async () => {
       await page.getByTestId('topbar-knowledge-base').click()
-      await page.getByTestId('knowledge-new-title').fill(noteTitle)
-      await page.getByTestId('knowledge-add').click()
+      await page.getByTestId('knowledge-page-new-title').fill(noteTitle)
+      await page.getByTestId('knowledge-page-add').click()
     },
     ui: async () => {
       await expect(page.getByText(noteTitle)).toBeVisible()
@@ -354,17 +354,17 @@ test('knowledge base and settings coverage', async ({ page }) => {
   const noteCard = page.locator('.knowledge-card').filter({ hasText: noteTitle }).first()
   const editButton = noteCard.getByRole('button', { name: '编辑' })
   const editTestId = await editButton.getAttribute('data-testid')
-  const noteId = editTestId?.replace('knowledge-edit-', '')
+  const noteId = editTestId?.replace('knowledge-page-edit-', '')
   await editButton.click()
 
   const updatedTitle = `${noteTitle}-改`
-  await page.getByTestId('knowledge-edit-title').fill(updatedTitle)
-  await page.getByTestId('knowledge-edit-description').fill('编辑后的描述')
+  await page.getByTestId('knowledge-page-edit-title').fill(updatedTitle)
+  await page.getByTestId('knowledge-page-edit-description').fill('编辑后的描述')
 
   await withRealFeedback(page, {
     api: { url: '/api/notes/', method: 'PUT' },
     action: async () => {
-      await page.getByTestId('knowledge-edit-save').click()
+      await page.getByTestId('knowledge-page-edit-save').click()
     },
     ui: async () => {
       await expect(page.getByText(updatedTitle)).toBeVisible()
@@ -376,18 +376,18 @@ test('knowledge base and settings coverage', async ({ page }) => {
     }
   })
 
-  await page.getByTestId('knowledge-search').fill(updatedTitle)
+  await page.getByTestId('knowledge-page-search').fill(updatedTitle)
   await expect(page.getByText(updatedTitle)).toBeVisible()
-  await page.getByTestId('knowledge-search').fill('')
+  await page.getByTestId('knowledge-page-search').fill('')
 
-  await page.getByTestId('knowledge-tab-location').click()
-  await page.getByTestId('knowledge-tab-character').click()
+  await page.getByTestId('knowledge-page-tab-location').click()
+  await page.getByTestId('knowledge-page-tab-character').click()
 
   if (noteId) {
     await withRealFeedback(page, {
       api: { url: '/api/notes/', method: 'DELETE' },
       action: async () => {
-        await page.getByTestId(`knowledge-delete-${noteId}`).click()
+        await page.getByTestId(`knowledge-page-delete-${noteId}`).click()
       },
       ui: async () => {
         await expect(page.getByText(updatedTitle)).toHaveCount(0)
@@ -400,7 +400,7 @@ test('knowledge base and settings coverage', async ({ page }) => {
     })
   }
 
-  await page.getByTestId('knowledge-close').click()
+  await page.getByTestId('knowledge-back').click()
   await page.getByTestId('topbar-settings').click()
   await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
 

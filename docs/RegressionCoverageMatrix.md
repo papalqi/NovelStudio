@@ -13,7 +13,7 @@
 ## 顶部栏 TopBar (`apps/web/src/app/components/TopBar.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
 | --- | --- | --- | --- | --- |
-| TB-01 | 资料库按钮 | 资料库抽屉打开 | `/api/notes` 列表可见且刷新后仍存在 | e2e/app.spec.ts; e2e/coverage.spec.ts |
+| TB-01 | 资料库按钮 | 资料库页面打开 | `/api/notes` 列表可见且刷新后仍存在 | e2e/app.spec.ts |
 | TB-02 | 预览按钮 | 预览弹窗打开 | 使用当前章节内容渲染 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | TB-03 | 主题切换按钮 | `data-theme` 在 light/dark 间切换 | `/api/settings` 持久化主题配置 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | TB-04 | 设置按钮 | 设置页面打开 | `/api/settings` 被加载并可保存 | e2e/app.spec.ts; e2e/coverage.spec.ts |
@@ -42,6 +42,10 @@
 | EX-18 | 右键章节 -> 删除 | 章节消失 | `/api/chapters/:id` 删除且刷新后仍不存在 | e2e/coverage.spec.ts |
 | EX-19 | 拖拽章节排序 | 顺序变化 | `/api/chapters/:id` orderIndex 持久化 | e2e/coverage.spec.ts |
 | EX-20 | 点击章节（键盘 Enter/Space） | 可用键盘激活 | 行为与点击一致 | e2e/coverage.spec.ts |
+| EX-21 | 章节复选框 | 批量操作面板出现 | 无持久化 | e2e/new-features.spec.ts |
+| EX-22 | 批量复制按钮 | 新章节出现在目标卷 | `/api/chapters` 新增 | e2e/new-features.spec.ts |
+| EX-23 | 批量移动按钮 | 章节出现在目标卷 | `/api/chapters/:id` 更新 | e2e/new-features.spec.ts |
+| EX-24 | 批量合并按钮 | 合并章节生成且源章节删除 | `/api/chapters` 新增 + 删除 | e2e/new-features.spec.ts |
 
 ## 编辑器 EditorPane (`apps/web/src/app/components/EditorPane.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
@@ -52,6 +56,8 @@
 | ED-04 | 目标字数输入 | 目标字数/进度条更新 | `/api/chapters/:id` targetWordCount 持久化 | e2e/coverage.spec.ts |
 | ED-05 | 保存版本按钮 | 版本列表新增 | `/api/chapters/:id/versions` 新增 | e2e/coverage.spec.ts |
 | ED-06 | 编辑器正文输入 | 字数与内容变化 | `/api/chapters/:id/content` 持久化 | e2e/coverage.spec.ts |
+| ED-07 | 版本对比视图 | Diff 视图显示 | 无持久化 | e2e/new-features.spec.ts |
+| ED-08 | 版本对比退出 | 返回编辑模式 | 无持久化 | e2e/new-features.spec.ts |
 
 ## 右侧面板 RightPanel (`apps/web/src/app/components/RightPanel.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
@@ -75,22 +81,26 @@
 | RP-17 | Accordion: 版本历史 | 折叠/展开 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | RP-18 | Accordion: 评论协作 | 折叠/展开 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | RP-19 | Accordion: AI 控制台 | 折叠/展开 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
+| RP-20 | 版本对比按钮 | 进入版本对比模式 | 无持久化 | e2e/new-features.spec.ts |
+| RP-21 | 运行记录重放按钮 | 日志提示重放完成 | `/api/ai/complete` 调用 | e2e/new-features.spec.ts |
+| RP-22 | AI 请求重试 | 失败后自动重试并成功 | `/api/ai/complete` 重试 | e2e/new-features.spec.ts |
 
-## 资料库抽屉 KnowledgeBaseDrawer (`apps/web/src/app/components/KnowledgeBaseDrawer.tsx`)
+## 资料库页面 KnowledgeBasePage (`apps/web/src/app/components/KnowledgeBasePage.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
 | --- | --- | --- | --- | --- |
-| KB-01 | 点击遮罩关闭 | 抽屉关闭 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-02 | 关闭按钮 | 抽屉关闭 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-03 | 类型 Tab 切换 | 列表筛选变化 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-04 | 搜索输入 | 列表筛选变化 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-05 | 新条目标题输入 | 输入可见 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-06 | 新建按钮 | 列表新增 | `/api/notes` 新增且刷新后仍存在 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-07 | 条目编辑按钮 | 编辑弹窗打开 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-08 | 条目删除按钮 | 条目消失 | `/api/notes/:id` 删除且刷新后仍不存在 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-09 | 编辑标题输入 | 文本变化 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-10 | 编辑描述输入 | 文本变化 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-11 | 编辑取消 | 弹窗关闭且不保存 | 无持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
-| KB-12 | 编辑保存 | 条目内容更新 | `/api/notes/:id` 更新持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
+| KB-01 | 返回编辑按钮 | 返回编辑页 | 无持久化 | e2e/new-features.spec.ts |
+| KB-02 | 分类 Tab 切换 | 列表筛选变化 | 无持久化 | e2e/coverage.spec.ts |
+| KB-03 | 搜索输入 | 列表筛选变化 | 无持久化 | e2e/coverage.spec.ts |
+| KB-04 | 新条目标题输入 | 输入可见 | 无持久化 | e2e/coverage.spec.ts |
+| KB-05 | 新建按钮 | 列表新增 | `/api/notes` 新增且刷新后仍存在 | e2e/app.spec.ts |
+| KB-06 | 条目编辑按钮 | 编辑弹窗打开 | 无持久化 | e2e/coverage.spec.ts |
+| KB-07 | 条目删除按钮 | 条目消失 | `/api/notes/:id` 删除且刷新后仍不存在 | e2e/coverage.spec.ts |
+| KB-08 | 编辑标题输入 | 文本变化 | 无持久化 | e2e/coverage.spec.ts |
+| KB-09 | 编辑描述输入 | 文本变化 | 无持久化 | e2e/new-features.spec.ts |
+| KB-10 | 编辑取消 | 弹窗关闭且不保存 | 无持久化 | e2e/coverage.spec.ts |
+| KB-11 | 编辑保存 | 条目内容更新 | `/api/notes/:id` 更新持久化 | e2e/new-features.spec.ts |
+| KB-12 | 插入引用按钮 | 编辑器插入引用块 | `/api/chapters/:id/content` 持久化 | e2e/new-features.spec.ts |
+| KB-13 | 刷新引用按钮 | 引用内容更新 | `/api/chapters/:id/content` 持久化 | e2e/new-features.spec.ts |
 
 ## 设置页 SettingsPage (`apps/web/src/app/components/SettingsPage.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
@@ -128,6 +138,14 @@
 | ST-31 | 自动保存开关 | 状态变化 | `/api/settings` 持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | ST-32 | 自动保存间隔输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
 | ST-33 | 导出格式选择 | 选项变化 | `/api/settings` 持久化 | e2e/app.spec.ts; e2e/coverage.spec.ts |
+| ST-34 | Agent 串行开关 | 串行状态变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-35 | Agent 串行顺序输入 | 顺序数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-36 | Agent 输出 Schema 输入 | Schema 文本变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-37 | 请求超时输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-38 | 最大重试次数输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-39 | 重试间隔输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-40 | 最大并发输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
+| ST-41 | 每分钟上限输入 | 数值变化 | `/api/settings` 持久化 | e2e/app.spec.ts |
 
 ## 预览弹窗 PreviewModal (`apps/web/src/app/components/PreviewModal.tsx`)
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
@@ -138,6 +156,13 @@
 | PV-04 | 关闭按钮 | 弹窗关闭 | 无持久化 | e2e/coverage.spec.ts |
 | PV-05 | 点击遮罩关闭 | 弹窗关闭 | 无持久化 | e2e/coverage.spec.ts |
 | PV-06 | ESC 关闭 | 弹窗关闭 | 无持久化 | e2e/coverage.spec.ts |
+| PV-07 | TXT Tab | 内容切换到 TXT | 无持久化 | e2e/new-features.spec.ts |
+| PV-08 | TXT 下载按钮 | TXT 下载触发 | 浏览器下载行为 | e2e/new-features.spec.ts |
+
+## 冲突提示 ConflictModal (`apps/web/src/app/components/ConflictModal.tsx`)
+| ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |
+| --- | --- | --- | --- | --- |
+| CF-01 | 冲突提示弹窗 | 弹窗显示并可见按钮 | `/api/chapters/:id/content` 返回 409 | e2e/new-features.spec.ts |
 
 ## 通用组件交互覆盖（由各模块用例覆盖）
 | ID | 控件/触发 | 期望 UI 反馈 | 期望接口/持久化 | 覆盖用例 |

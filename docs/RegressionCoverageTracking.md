@@ -4,7 +4,7 @@
 
 | ID | 控件/触发 | 对应用例 | 覆盖状态 | 风险等级 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| TB-01 | 资料库按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| TB-01 | 资料库按钮 | e2e/app.spec.ts | 已覆盖 | 低 |  |
 | TB-02 | 预览按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | TB-03 | 主题切换按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | TB-04 | 设置按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
@@ -29,12 +29,18 @@
 | EX-18 | 右键章节 -> 删除 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | EX-19 | 拖拽章节排序 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | EX-20 | 点击章节（键盘 Enter/Space） | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| EX-21 | 章节复选框 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| EX-22 | 批量复制按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| EX-23 | 批量移动按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| EX-24 | 批量合并按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
 | ED-01 | 章节标题输入 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ED-02 | 状态下拉选择 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ED-03 | 标签输入 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ED-04 | 目标字数输入 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ED-05 | 保存版本按钮 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ED-06 | 编辑器正文输入 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| ED-07 | 版本对比视图 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| ED-08 | 版本对比退出 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
 | RP-01 | Provider 选择 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | RP-02 | Agent 选择 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | RP-03 | 块级 AI: 改写 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 中 | AI 调用依赖外部服务/Mock |
@@ -54,18 +60,22 @@
 | RP-17 | Accordion: 版本历史 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | RP-18 | Accordion: 评论协作 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | RP-19 | Accordion: AI 控制台 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-01 | 点击遮罩关闭 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-02 | 关闭按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-03 | 类型 Tab 切换 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-04 | 搜索输入 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-05 | 新条目标题输入 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-06 | 新建按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-07 | 条目编辑按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-08 | 条目删除按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-09 | 编辑标题输入 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-10 | 编辑描述输入 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-11 | 编辑取消 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
-| KB-12 | 编辑保存 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| RP-20 | 版本对比按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| RP-21 | 运行记录重放按钮 | e2e/new-features.spec.ts | 已覆盖 | 中 |  |
+| RP-22 | AI 请求重试 | e2e/new-features.spec.ts | 已覆盖 | 中 |  |
+| KB-01 | 返回编辑按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-02 | 分类 Tab 切换 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-03 | 搜索输入 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-04 | 新条目标题输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| KB-05 | 新建按钮 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| KB-06 | 条目编辑按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-07 | 条目删除按钮 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| KB-08 | 编辑标题输入 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| KB-09 | 编辑描述输入 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-10 | 编辑取消 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-11 | 编辑保存 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-12 | 插入引用按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| KB-13 | 刷新引用按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
 | ST-01 | 返回按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ST-02 | 保存设置按钮 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ST-03 | 导航：个人资料 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
@@ -99,12 +109,23 @@
 | ST-31 | 自动保存开关 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ST-32 | 自动保存间隔输入 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | ST-33 | 导出格式选择 | e2e/app.spec.ts; e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| ST-34 | Agent 串行开关 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-35 | Agent 串行顺序输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-36 | Agent 输出 Schema 输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-37 | 请求超时输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-38 | 最大重试次数输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-39 | 重试间隔输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-40 | 最大并发输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
+| ST-41 | 每分钟上限输入 | e2e/app.spec.ts | 已覆盖 | 低 |  |
 | PV-01 | HTML Tab | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | PV-02 | Markdown Tab | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | PV-03 | 下载按钮 | e2e/coverage.spec.ts | 已覆盖 | 中 | 下载依赖浏览器行为 |
 | PV-04 | 关闭按钮 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | PV-05 | 点击遮罩关闭 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | PV-06 | ESC 关闭 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
+| PV-07 | TXT Tab | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| PV-08 | TXT 下载按钮 | e2e/new-features.spec.ts | 已覆盖 | 低 |  |
+| CF-01 | 冲突提示弹窗 | e2e/new-features.spec.ts | 已覆盖 | 中 |  |
 | CM-01 | ContextMenu 项点击 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | CM-02 | ContextMenu 点击外部 | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
 | CM-03 | ContextMenu ESC | e2e/coverage.spec.ts | 已覆盖 | 低 |  |
