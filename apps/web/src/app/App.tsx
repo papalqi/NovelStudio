@@ -9,6 +9,7 @@ import { PreviewModal } from './components/PreviewModal'
 import { ConflictModal } from './components/ConflictModal'
 import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
 import { useAppData } from './hooks/useAppData'
+import { useConflictHandler } from './hooks/useConflictHandler'
 import { debounce } from '../utils/debounce'
 import { createId } from '../utils/id'
 import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
@@ -22,14 +23,6 @@ import './App.css'
 type AppPage = 'editor' | 'settings'
 
 const formatDate = () => new Date().toISOString().slice(0, 10)
-
-type ConflictState = {
-  chapterId: string
-  chapterTitle: string
-  localContent: Block[]
-  localWordCount: number
-  serverUpdatedAt?: string
-}
 
 export const App = () => {
   const editor = useCreateBlockNote()
@@ -69,13 +62,11 @@ export const App = () => {
   const [aiLogs, setAiLogs] = useState<LogEntry[]>([])
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([])
   const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
-  const [conflictState, setConflictState] = useState<ConflictState | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
 
   const switchingRef = useRef(false)
-  const conflictRef = useRef(false)
 
   const resolvedVolumeId = useMemo(() => {
     if (volumes.find((volume) => volume.id === activeVolumeId)) return activeVolumeId
@@ -98,10 +89,6 @@ export const App = () => {
     document.body.style.fontFamily = settings.ui.fontFamily
     document.documentElement.dataset.theme = settings.ui.theme
   }, [settings])
-
-  useEffect(() => {
-    conflictRef.current = Boolean(conflictState)
-  }, [conflictState])
 
   const resolvedProviderId = useMemo(() => {
     const providerIds = settings?.providers ?? []
@@ -149,21 +136,16 @@ export const App = () => {
     setAiLogs((prev) => [entry, ...prev].slice(0, 12))
   }, [])
 
-  const openConflictPrompt = useCallback(
-    (content: Block[], wordCount: number) => {
-      if (!activeChapter) return
-      setConflictState((prev) =>
-        prev ?? {
-          chapterId: activeChapter.id,
-          chapterTitle: activeChapter.title,
-          localContent: content,
-          localWordCount: wordCount,
-          serverUpdatedAt: activeChapter.updatedAt
-        }
-      )
-    },
-    [activeChapter]
-  )
+  const { conflictState, conflictRef, openConflictPrompt, handleConflictOverwrite, handleConflictSaveCopy, handleConflictReload } =
+    useConflictHandler({
+      activeChapter,
+      chapters,
+      createChapterVersion,
+      refresh,
+      saveChapterContent,
+      pushLog,
+      onVersionsUpdated: setVersions
+    })
 
   const AI_ACTIONS: AiAction[] = [
     'rewrite',
@@ -339,120 +321,6 @@ export const App = () => {
         payloadSummary: `chapter=${resolvedChapterId} version=${diffVersion.id}`
       })
     )
-  }
-
-  const handleConflictOverwrite = async () => {
-    if (!conflictState) return
-    const requestId = createId()
-    const startedAt = nowMs()
-    try {
-      await saveChapterContent(
-        conflictState.chapterId,
-        conflictState.localContent,
-        conflictState.localWordCount,
-        formatDate(),
-        { skipConflict: true }
-      )
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'success',
-          message: '已覆盖保存',
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId}`
-        })
-      )
-      setConflictState(null)
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '覆盖保存失败'
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'error',
-          message: `覆盖保存失败：${message}`,
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId}`
-        })
-      )
-    }
-  }
-
-  const handleConflictSaveCopy = async () => {
-    if (!conflictState) return
-    const conflictChapter = chapters.find((chapter) => chapter.id === conflictState.chapterId)
-    if (!conflictChapter) {
-      setConflictState(null)
-      return
-    }
-    const requestId = createId()
-    const startedAt = nowMs()
-    const snapshot: Chapter = {
-      ...conflictChapter,
-      content: conflictState.localContent,
-      wordCount: conflictState.localWordCount,
-      updatedAt: formatDate()
-    }
-    try {
-      const nextVersions = await createChapterVersion(snapshot)
-      setVersions(nextVersions)
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'success',
-          message: '已另存为版本',
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId} versions=${nextVersions.length}`
-        })
-      )
-      setConflictState(null)
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '另存失败'
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'error',
-          message: `另存失败：${message}`,
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId}`
-        })
-      )
-    }
-  }
-
-  const handleConflictReload = async () => {
-    if (!conflictState) return
-    const requestId = createId()
-    const startedAt = nowMs()
-    try {
-      await refresh()
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'success',
-          message: '已重新加载最新版本',
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId}`
-        })
-      )
-      setConflictState(null)
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '重新加载失败'
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'conflict',
-          status: 'error',
-          message: `重新加载失败：${message}`,
-          durationMs: nowMs() - startedAt,
-          payloadSummary: `chapter=${conflictState.chapterId}`
-        })
-      )
-    }
   }
 
   const handleChapterMetaUpdate = (patch: Partial<Chapter>) => {
