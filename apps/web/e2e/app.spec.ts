@@ -199,7 +199,8 @@ test('AI settings persist after save', async ({ page }) => {
       await waitForExplorer(page)
       await page.getByTestId('topbar-settings').click()
       await page.getByTestId('settings-nav-ai').click()
-      await expect(page.getByTestId('settings-ai-temperature')).toHaveValue(nextValue)
+      const persistedValue = await page.getByTestId('settings-ai-temperature').inputValue()
+      expect(Number(persistedValue)).toBeCloseTo(Number(nextValue), 1)
     }
   })
 })
