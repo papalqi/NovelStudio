@@ -11,9 +11,9 @@ export default defineConfig({
     baseURL: 'http://localhost:5173'
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'node e2e/devServer.js',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    cwd: path.resolve(configDir, '../..')
+    cwd: configDir
   }
 })
