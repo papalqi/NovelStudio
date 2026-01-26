@@ -11,7 +11,7 @@ import {
   Globe,
   RefreshCw
 } from 'lucide-react'
-import type { Chapter, Comment, Provider, Agent, Block } from '../../types'
+import type { Chapter, Comment, Provider, Agent, Block, AiRunRecord } from '../../types'
 import type { AiAction } from '../../ai/aiService'
 import { getPlainTextFromBlock } from '../../utils/text'
 import { formatLogEntry, type LogEntry } from '../../utils/logging'
@@ -34,6 +34,8 @@ type RightPanelProps = {
   comments: Comment[]
   onAddComment: (author: string, body: string) => void
   aiLogs: LogEntry[]
+  aiRuns: AiRunRecord[]
+  onReplayRun: (run: AiRunRecord) => void
   authorName: string
 }
 
@@ -68,6 +70,8 @@ export const RightPanel = ({
   comments,
   onAddComment,
   aiLogs,
+  aiRuns,
+  onReplayRun,
   authorName
 }: RightPanelProps) => {
   const [commentBody, setCommentBody] = useState('')
@@ -205,6 +209,35 @@ export const RightPanel = ({
               </div>
             ))}
             {aiLogs.length === 0 && <div className="empty-state">暂无日志</div>}
+          </div>
+          <div className="run-list">
+            <div className="run-list-title">运行记录</div>
+            {aiRuns.map((run) => (
+              <div key={run.id} className="run-item">
+                <div className="run-header">
+                  <div className="run-meta">
+                    <span>{run.createdAt}</span>
+                    <span>{run.action}</span>
+                    <span className={`run-status ${run.status}`}>{run.status}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onReplayRun(run)}
+                    data-testid={`ai-run-replay-${run.id}`}
+                  >
+                    重放
+                  </Button>
+                </div>
+                <details className="run-details">
+                  <summary>查看请求/响应</summary>
+                  <pre className="run-json">
+                    {JSON.stringify({ request: run.request, response: run.response }, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            ))}
+            {aiRuns.length === 0 && <div className="empty-state">暂无运行记录</div>}
           </div>
         </div>
       </Accordion>

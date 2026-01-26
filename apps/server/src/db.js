@@ -71,4 +71,16 @@ db.exec(`
     body text not null,
     createdAt text not null
   );
+
+  create table if not exists ai_runs (
+    id text primary key,
+    chapterId text,
+    action text not null,
+    status text not null,
+    providerId text,
+    agentIds text not null,
+    request text not null,
+    response text not null,
+    createdAt text not null
+  );
 `)

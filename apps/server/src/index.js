@@ -21,7 +21,9 @@ import {
   upsertNote,
   deleteNote,
   listComments,
-  addComment
+  addComment,
+  listAiRuns,
+  createAiRun
 } from './store.js'
 import { resetDatabase } from './seedUtils.js'
 import { enforceTestResetGuard } from './testGuards.js'
@@ -305,6 +307,28 @@ app.post('/api/chapters/:id/comments', (req, res) => {
   const schema = z.object({ author: z.string().default('匿名'), body: z.string() })
   const body = schema.parse(req.body)
   res.json(addComment({ id: uuid(), chapterId: req.params.id, author: body.author, body: body.body }))
+})
+
+app.get('/api/ai/runs', (req, res) => {
+  const chapterId = req.query.chapterId
+  res.json(listAiRuns(typeof chapterId === 'string' ? chapterId : undefined))
+})
+
+app.post('/api/ai/runs', (req, res) => {
+  const schema = z.object({
+    id: z.string().default(uuid()),
+    createdAt: z.string().optional(),
+    chapterId: z.string().optional(),
+    action: z.string(),
+    status: z.enum(['success', 'error']),
+    providerId: z.string().optional(),
+    agentIds: z.array(z.string()).default([]),
+    request: z.any(),
+    response: z.any()
+  })
+  const body = schema.parse(req.body)
+  const saved = createAiRun(body)
+  res.json(saved)
 })
 
 if (testResetEnabled) {

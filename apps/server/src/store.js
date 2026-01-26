@@ -184,3 +184,41 @@ export const addComment = ({ id, chapterId, author, body }) => {
     .run(id, chapterId, author, body, timestamp)
   return listComments(chapterId)
 }
+
+export const listAiRuns = (chapterId) => {
+  const rows = chapterId
+    ? db.prepare('select * from ai_runs where chapterId = ? order by createdAt desc').all(chapterId)
+    : db.prepare('select * from ai_runs order by createdAt desc').all()
+  return rows.map((row) => ({
+    ...row,
+    agentIds: parseJSON(row.agentIds, []),
+    request: parseJSON(row.request, {}),
+    response: parseJSON(row.response, {})
+  }))
+}
+
+export const createAiRun = (run) => {
+  const timestamp = run.createdAt ?? now()
+  db.prepare(`
+    insert into ai_runs (id, chapterId, action, status, providerId, agentIds, request, response, createdAt)
+    values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    run.id,
+    run.chapterId ?? null,
+    run.action,
+    run.status,
+    run.providerId ?? null,
+    JSON.stringify(run.agentIds ?? []),
+    JSON.stringify(run.request ?? {}),
+    JSON.stringify(run.response ?? {}),
+    timestamp
+  )
+  const row = db.prepare('select * from ai_runs where id = ?').get(run.id)
+  if (!row) return null
+  return {
+    ...row,
+    agentIds: parseJSON(row.agentIds, []),
+    request: parseJSON(row.request, {}),
+    response: parseJSON(row.response, {})
+  }
+}

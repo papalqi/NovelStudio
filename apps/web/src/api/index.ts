@@ -1,5 +1,15 @@
 import { createApiClient, resolveApiBaseUrl } from './client'
-import type { AppBootstrap, Chapter, Note, Settings, Block, ChapterVersion, Comment, AiRequestSettings } from '../types'
+import type {
+  AppBootstrap,
+  Chapter,
+  Note,
+  Settings,
+  Block,
+  ChapterVersion,
+  Comment,
+  AiRequestSettings,
+  AiRunRecord
+} from '../types'
 import { normalizeAiRequestSettings } from '../utils/aiRequest'
 
 export const fetchBootstrap = (baseUrl?: string) =>
@@ -268,3 +278,17 @@ export const runAiCompletion = (
     }
   })()
 }
+
+export const listAiRuns = (chapterId?: string, baseUrl?: string) => {
+  const query = chapterId ? `?chapterId=${encodeURIComponent(chapterId)}` : ''
+  return createApiClient(baseUrl).fetchJson<AiRunRecord[]>(`/api/ai/runs${query}`)
+}
+
+export const createAiRun = (
+  payload: Omit<AiRunRecord, 'createdAt'> & { createdAt?: string },
+  baseUrl?: string
+) =>
+  createApiClient(baseUrl).fetchJson<AiRunRecord>('/api/ai/runs', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })

@@ -92,6 +92,38 @@ export type Comment = {
   createdAt: string
 }
 
+export type AiRunRequest = {
+  action: string
+  content: string
+  context: string
+  providerId?: string
+  agentId?: string
+  agentSequenceIds: string[]
+  temperature: number
+  maxTokens: number
+  requestConfig: AiRequestSettings
+  targetBlockId?: string
+  scope: 'block' | 'chapter'
+}
+
+export type AiRunResponse = {
+  content?: string
+  error?: string
+  meta?: { retries: number; attempts: number }
+}
+
+export type AiRunRecord = {
+  id: string
+  createdAt: string
+  status: 'success' | 'error'
+  chapterId?: string
+  action: string
+  providerId?: string
+  agentIds: string[]
+  request: AiRunRequest
+  response: AiRunResponse
+}
+
 export type AppBootstrap = {
   settings: Settings
   volumes: Volume[]

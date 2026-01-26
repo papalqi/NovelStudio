@@ -34,7 +34,18 @@ const parseSchemaText = (schemaText: string) => {
   }
 }
 
-const resolveAgentSequence = (agents: Agent[], selectedAgentId?: string, defaultAgentId?: string) => {
+const resolveAgentSequence = (
+  agents: Agent[],
+  selectedAgentId?: string,
+  defaultAgentId?: string,
+  forcedAgentIds?: string[]
+) => {
+  if (forcedAgentIds?.length) {
+    const sequence = forcedAgentIds
+      .map((id) => agents.find((agent) => agent.id === id))
+      .filter((agent): agent is Agent => !!agent)
+    if (sequence.length) return sequence
+  }
   const serialAgents = agents.filter((agent) => agent.serialEnabled)
   if (serialAgents.length > 0) {
     return serialAgents
@@ -85,9 +96,15 @@ export const runAiAction = async (params: {
   agents: Agent[]
   providerId?: string
   agentId?: string
+  agentSequenceIds?: string[]
 }) => {
   const provider = params.providers.find((item) => item.id === (params.providerId ?? params.settings.ai.defaultProviderId))
-  const agentSequence = resolveAgentSequence(params.agents, params.agentId, params.settings.ai.defaultAgentId)
+  const agentSequence = resolveAgentSequence(
+    params.agents,
+    params.agentId,
+    params.settings.ai.defaultAgentId,
+    params.agentSequenceIds
+  )
 
   if (!provider) {
     throw new Error('未配置 Provider')
@@ -164,7 +181,8 @@ export const runAiAction = async (params: {
     provider,
     agent: agentSequence[agentSequence.length - 1],
     label: actionLabel[params.action],
-    meta: { retries: totalRetries, attempts: totalAttempts }
+    meta: { retries: totalRetries, attempts: totalAttempts },
+    agentSequenceIds: agentSequence.map((item) => item.id)
   }
 }
 
