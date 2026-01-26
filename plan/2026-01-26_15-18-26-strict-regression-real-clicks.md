@@ -40,3 +40,4 @@ created_at: 2026-01-26T15:18:03+08:00
 - `apps/server/src/store.js`
 - `docs/Plan.md`
 - `docs/issual.md`
+- `docs/RegressionCoverageMatrix.md`
