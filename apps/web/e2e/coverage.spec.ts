@@ -1,9 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 import { withRealFeedback } from './realFeedback'
+import { resetTestData } from './resetTestData'
 
 const waitForExplorer = async (page: Page) => {
   await expect(page.getByText('资源管理器')).toBeVisible()
 }
+
+test.beforeEach(async ({ request }) => {
+  await resetTestData(request)
+})
 
 const volumeByName = (page: Page, name: string) =>
   page.locator('[data-testid^="explorer-volume-"]').filter({ hasText: name }).first()

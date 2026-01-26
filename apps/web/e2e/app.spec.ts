@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { withRealFeedback } from './realFeedback'
+import { resetTestData } from './resetTestData'
 
 const getVolumeCount = async (page: import('@playwright/test').Page) =>
   page.locator('[data-testid^="explorer-volume-"]').count()
@@ -10,6 +11,10 @@ const getChapterCount = async (page: import('@playwright/test').Page) =>
 const waitForExplorer = async (page: import('@playwright/test').Page) => {
   await expect(page.getByText('资源管理器')).toBeVisible()
 }
+
+test.beforeEach(async ({ request }) => {
+  await resetTestData(request)
+})
 
 const createVolumeWithFeedback = async (page: import('@playwright/test').Page) => {
   const before = await getVolumeCount(page)

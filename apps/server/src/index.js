@@ -22,6 +22,7 @@ import {
   listComments,
   addComment
 } from './store.js'
+import { resetDatabase } from './seedUtils.js'
 
 const app = express()
 const port = process.env.PORT || 8787
@@ -291,6 +292,13 @@ app.post('/api/chapters/:id/comments', (req, res) => {
   const body = schema.parse(req.body)
   res.json(addComment({ id: uuid(), chapterId: req.params.id, author: body.author, body: body.body }))
 })
+
+if (process.env.NOVELSTUDIO_ALLOW_TEST_RESET === '1') {
+  app.post('/api/test/reset', (_req, res) => {
+    resetDatabase()
+    res.json({ ok: true })
+  })
+}
 
 app.post('/api/ai/complete', async (req, res) => {
   const schema = z.object({
