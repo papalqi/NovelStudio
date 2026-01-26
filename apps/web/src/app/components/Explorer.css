@@ -65,11 +65,6 @@
   color: var(--ink);
 }
 
-.tree-actions {
-  display: flex;
-  gap: 6px;
-}
-
 .tree-children {
   margin-top: 6px;
   display: flex;
@@ -107,18 +102,6 @@
   color: var(--muted);
 }
 
-.tree-item-actions {
-  position: absolute;
-  right: 8px;
-  top: 6px;
-  display: none;
-  gap: 4px;
-}
-
-.tree-item:hover .tree-item-actions {
-  display: flex;
-}
-
 .status-dot {
   width: 8px;
   height: 8px;
@@ -142,4 +125,17 @@
   padding: 12px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Rename Modal */
+.rename-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rename-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

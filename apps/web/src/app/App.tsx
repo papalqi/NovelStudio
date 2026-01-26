@@ -21,7 +21,7 @@ export const App = () => {
     settings,
     volumes,
     chapters,
-    notes,
+    notes: _notes, // Reserved for Phase 3 Notes Drawer
     loading,
     offline,
     updateSettings,
@@ -35,12 +35,18 @@ export const App = () => {
     loadVersions,
     createChapterVersion,
     restoreChapterVersion,
-    refreshNotes,
-    upsertNoteItem,
-    removeNoteItem,
+    refreshNotes: _refreshNotes, // Reserved for Phase 3 Notes Drawer
+    upsertNoteItem: _upsertNoteItem, // Reserved for Phase 3 Notes Drawer
+    removeNoteItem: _removeNoteItem, // Reserved for Phase 3 Notes Drawer
     loadComments,
     addChapterComment
   } = useAppData()
+
+  // Suppress unused variable warnings for Phase 3 Notes Drawer
+  void _notes
+  void _refreshNotes
+  void _upsertNoteItem
+  void _removeNoteItem
 
   const [activeVolumeId, setActiveVolumeId] = useState('')
   const [activeChapterId, setActiveChapterId] = useState('')
@@ -106,9 +112,10 @@ export const App = () => {
     loadComments(resolvedChapterId).then(setComments)
   }, [resolvedChapterId, loadVersions, loadComments])
 
+  // Keep notes data loaded for Phase 3 Notes Drawer
   useEffect(() => {
-    refreshNotes()
-  }, [refreshNotes])
+    _refreshNotes()
+  }, [_refreshNotes])
 
   const debouncedSave = useMemo(() => {
     return debounce((content: Block[]) => {
@@ -312,9 +319,6 @@ export const App = () => {
           onAddComment={(author, body) =>
             resolvedChapterId && addChapterComment(resolvedChapterId, author, body).then(setComments)
           }
-          notes={notes}
-          onSaveNote={upsertNoteItem}
-          onDeleteNote={removeNoteItem}
           aiLogs={aiLogs}
           authorName={settings?.profile.authorName ?? '匿名作者'}
         />

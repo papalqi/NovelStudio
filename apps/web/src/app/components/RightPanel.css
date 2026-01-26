@@ -1,148 +1,228 @@
+/* Right Panel - macOS Glass Style */
 .right-panel {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  width: 320px;
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border-left: 1px solid var(--color-glass-border);
+  overflow-y: auto;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  gap: var(--space-3);
 }
 
-.panel-section {
-  border-bottom: 1px solid var(--panel-border);
-  padding: 14px 16px;
+/* AI Executor Content */
+.ai-executor-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.panel-section:last-child {
-  border-bottom: none;
-}
-
-.panel-title {
+.ai-section-title {
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 10px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2);
 }
 
-.panel-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Block Info Card */
+.block-info-card {
+  padding: var(--space-3);
 }
 
-.panel-body label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.panel-body select,
-.panel-body textarea,
-.panel-body input {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #e4d5c3;
-  font-size: 12px;
-}
-
-.block-card {
-  background: var(--bg-accent);
-  border-radius: 12px;
-  padding: 10px 12px;
+.block-info-card .card-body {
+  padding: 0;
 }
 
 .block-label {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--color-text-tertiary);
 }
 
 .block-value {
   font-size: 13px;
-  color: var(--ink);
-  margin-top: 6px;
+  color: var(--color-text-primary);
+  margin-top: var(--space-1);
 }
 
-.action-grid {
+/* AI Action Grid */
+.ai-action-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.action-button {
-  border: 1px solid #f0c7a5;
-  background: #fff4e8;
-  color: #b44e12;
-  padding: 10px;
-  border-radius: 10px;
+.ai-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
   cursor: pointer;
-  font-weight: 600;
+  transition: all var(--transition-fast);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-family: inherit;
 }
 
-.action-button:hover {
-  background: #ffe6d1;
+.ai-action-button:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
-.version-list,
-.comment-list,
-.note-list {
-  display: grid;
-  gap: 8px;
+.ai-action-button:active {
+  transform: scale(0.98);
 }
 
-.version-item,
-.comment-item,
-.note-item {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #f7efe6;
+/* Chapter Pill */
+.chapter-pill {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  margin-top: var(--space-2);
+}
+
+/* Version Content */
+.version-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.version-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+/* Comment Content */
+.comment-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .comment-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .comment-author {
+  font-size: 12px;
   font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.comment-body {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
 }
 
 .comment-time {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--color-text-tertiary);
 }
 
-.chapter-pill {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #1f1c18;
-  color: #fbeedc;
-  font-size: 12px;
+.comment-input {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.note-toolbar {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
+.comment-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 
-.empty-state {
-  font-size: 12px;
-  color: var(--muted);
+.comment-input::placeholder {
+  color: var(--color-text-quaternary);
+}
+
+/* Console Content */
+.console-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .log-list {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .log-item {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #1f1c18;
-  color: #fef4e8;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
   font-size: 12px;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  word-break: break-all;
+}
+
+/* Empty State */
+.empty-state {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Dark Mode Adjustments */
+html[data-theme='dark'] .ai-action-button {
+  background: var(--color-bg-tertiary);
+}
+
+html[data-theme='dark'] .ai-action-button:hover {
+  background: var(--color-bg-secondary);
+}
+
+html[data-theme='dark'] .log-item {
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--color-text-primary);
 }

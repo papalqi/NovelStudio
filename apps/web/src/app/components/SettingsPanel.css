@@ -1,81 +1,259 @@
-.settings-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 18, 16, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-}
+/* ============================================
+ * Settings Panel - macOS System Preferences Style
+ * ============================================ */
 
-.settings-panel {
-  width: min(960px, 90vw);
-  max-height: 90vh;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e6e0d6;
-  box-shadow: 0 30px 60px rgba(20, 18, 16, 0.2);
+.settings-container {
   display: flex;
   flex-direction: column;
+  height: 70vh;
+  max-height: 600px;
+  min-height: 400px;
 }
 
-.settings-panel header,
-.settings-panel footer {
+/* ============================================
+ * Settings Layout (Nav + Content)
+ * ============================================ */
+.settings-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ============================================
+ * Left Navigation
+ * ============================================ */
+.settings-nav {
+  width: 180px;
+  padding: var(--space-3);
+  border-right: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.settings-nav-item:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.settings-nav-item.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+.settings-nav-item .nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+ * Content Area
+ * ============================================ */
+.settings-content {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: var(--color-bg-primary);
+}
+
+.settings-content-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 560px;
+}
+
+/* ============================================
+ * Settings Groups (Cards)
+ * ============================================ */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+/* ============================================
+ * Settings Row
+ * ============================================ */
+.settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #efe6d9;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-secondary);
 }
 
-.settings-panel footer {
-  border-top: 1px solid #efe6d9;
+.settings-row:last-child {
   border-bottom: none;
 }
 
-.settings-panel h2 {
-  margin: 0;
+.settings-row-label {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
 }
 
-.settings-body {
-  padding: 16px 20px;
-  overflow-y: auto;
+.settings-row-control {
+  flex: 1;
+  max-width: 240px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-row-control .input-wrapper,
+.settings-row-control .select-wrapper {
+  width: 100%;
+}
+
+/* ============================================
+ * Provider / Agent Cards
+ * ============================================ */
+.settings-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-lg);
+  transition: box-shadow var(--transition-fast);
+}
+
+.settings-item-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.settings-item-header .input-wrapper {
+  flex: 1;
+}
+
+.settings-item-fields {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
 }
 
-.settings-body section {
-  display: grid;
-  gap: 10px;
+.settings-add-button {
+  margin-top: var(--space-2);
 }
 
-.settings-body h3 {
-  margin: 0;
-  font-size: 14px;
+/* ============================================
+ * Footer Actions
+ * ============================================ */
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
 }
 
-.settings-body label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: #6f6a63;
+.settings-footer-right {
+  display: flex;
+  gap: var(--space-2);
 }
 
-.settings-body input,
-.settings-body select,
-.settings-body textarea {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #e4d5c3;
-  font-size: 12px;
+/* ============================================
+ * Responsive: Mobile Tab View
+ * ============================================ */
+@media (max-width: 768px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-nav {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-primary);
+    padding: var(--space-2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .settings-nav-item {
+    padding: var(--space-2) var(--space-3);
+    white-space: nowrap;
+  }
+
+  .settings-nav-item .nav-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .settings-content {
+    padding: var(--space-3);
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .settings-row-control {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .settings-footer {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .settings-footer-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
-.settings-card {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #f0e2d2;
-  background: #faf4ec;
+/* ============================================
+ * Dark Mode Adjustments
+ * ============================================ */
+html[data-theme='dark'] .settings-nav {
+  background: var(--color-bg-tertiary);
+}
+
+html[data-theme='dark'] .settings-item-card {
+  background: var(--color-bg-tertiary);
+}
+
+html[data-theme='dark'] .settings-footer {
+  background: var(--color-bg-tertiary);
 }

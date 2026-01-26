@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Plus, ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import type { Chapter, ChapterStatus, Volume } from '../../types'
+import { ContextMenu, useContextMenu, Modal, Input } from './common'
 import './Explorer.css'
 
 type ExplorerProps = {
@@ -25,6 +27,12 @@ const statusLabels: Record<ChapterStatus, string> = {
   done: '完成'
 }
 
+type RenameTarget = {
+  type: 'volume' | 'chapter'
+  id: string
+  title: string
+} | null
+
 export const Explorer = ({
   volumes,
   chapters,
@@ -44,6 +52,16 @@ export const Explorer = ({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ChapterStatus | 'all'>('all')
   const [draggingId, setDraggingId] = useState<string | null>(null)
+
+  // Context menu states
+  const volumeMenu = useContextMenu()
+  const chapterMenu = useContextMenu()
+  const [activeVolumeForMenu, setActiveVolumeForMenu] = useState<string>('')
+  const [activeChapterForMenu, setActiveChapterForMenu] = useState<string>('')
+
+  // Rename modal state
+  const [renameTarget, setRenameTarget] = useState<RenameTarget>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const filteredChapters = useMemo(() => {
     return chapters.filter((chapter) => {
@@ -66,6 +84,86 @@ export const Explorer = ({
     ids.splice(toIndex, 0, draggingId)
     onReorderChapter(volumeId, ids)
     setDraggingId(null)
+  }
+
+  const handleOpenRenameModal = (type: 'volume' | 'chapter', id: string, title: string) => {
+    setRenameTarget({ type, id, title })
+    setRenameValue(title)
+  }
+
+  const handleConfirmRename = () => {
+    if (!renameTarget || !renameValue.trim()) return
+    if (renameTarget.type === 'volume') {
+      onRenameVolume(renameTarget.id, renameValue.trim())
+    } else {
+      onRenameChapter(renameTarget.id, renameValue.trim())
+    }
+    setRenameTarget(null)
+    setRenameValue('')
+  }
+
+  const handleCloseRenameModal = () => {
+    setRenameTarget(null)
+    setRenameValue('')
+  }
+
+  const getVolumeMenuItems = (volumeId: string) => {
+    const volume = volumes.find((v) => v.id === volumeId)
+    return [
+      {
+        id: 'add-chapter',
+        label: '新建章节',
+        icon: <Plus size={16} />,
+        onClick: () => onCreateChapter(volumeId)
+      },
+      { type: 'separator' as const },
+      {
+        id: 'move-up',
+        label: '上移',
+        icon: <ChevronUp size={16} />,
+        onClick: () => onMoveVolume(volumeId, 'up')
+      },
+      {
+        id: 'move-down',
+        label: '下移',
+        icon: <ChevronDown size={16} />,
+        onClick: () => onMoveVolume(volumeId, 'down')
+      },
+      { type: 'separator' as const },
+      {
+        id: 'rename',
+        label: '重命名',
+        icon: <Pencil size={16} />,
+        onClick: () => handleOpenRenameModal('volume', volumeId, volume?.title || '')
+      },
+      {
+        id: 'delete',
+        label: '删除',
+        icon: <Trash2 size={16} />,
+        danger: true,
+        onClick: () => onDeleteVolume(volumeId)
+      }
+    ]
+  }
+
+  const getChapterMenuItems = (chapterId: string) => {
+    const chapter = chapters.find((c) => c.id === chapterId)
+    return [
+      {
+        id: 'rename',
+        label: '重命名',
+        icon: <Pencil size={16} />,
+        onClick: () => handleOpenRenameModal('chapter', chapterId, chapter?.title || '')
+      },
+      { type: 'separator' as const },
+      {
+        id: 'delete',
+        label: '删除',
+        icon: <Trash2 size={16} />,
+        danger: true,
+        onClick: () => onDeleteChapter(chapterId)
+      }
+    ]
   }
 
   return (
@@ -97,7 +195,14 @@ export const Explorer = ({
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((volume) => (
             <div key={volume.id} className="tree-group">
-              <div className="tree-group-title">
+              <div
+                className="tree-group-title"
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setActiveVolumeForMenu(volume.id)
+                  volumeMenu.openMenu(e)
+                }}
+              >
                 <button
                   className={activeVolumeId === volume.id ? 'active' : ''}
                   onClick={() => onSelectVolume(volume.id)}
@@ -105,29 +210,6 @@ export const Explorer = ({
                   <span className="tree-icon">▸</span>
                   {volume.title}
                 </button>
-                <div className="tree-actions">
-                  <button className="ghost-button" onClick={() => onCreateChapter(volume.id)}>
-                    + 章
-                  </button>
-                  <button className="ghost-button" onClick={() => onMoveVolume(volume.id, 'up')}>
-                    上移
-                  </button>
-                  <button className="ghost-button" onClick={() => onMoveVolume(volume.id, 'down')}>
-                    下移
-                  </button>
-                  <button
-                    className="ghost-button"
-                    onClick={() => {
-                      const next = window.prompt('卷名', volume.title)
-                      if (next) onRenameVolume(volume.id, next)
-                    }}
-                  >
-                    改名
-                  </button>
-                  <button className="ghost-button" onClick={() => onDeleteVolume(volume.id)}>
-                    删除
-                  </button>
-                </div>
               </div>
               <div className="tree-children">
                 {filteredChapters
@@ -138,6 +220,11 @@ export const Explorer = ({
                       key={chapter.id}
                       className={`tree-item ${activeChapterId === chapter.id ? 'selected' : ''}`}
                       onClick={() => onSelectChapter(chapter.id)}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setActiveChapterForMenu(chapter.id)
+                        chapterMenu.openMenu(e)
+                      }}
                       draggable
                       onDragStart={() => setDraggingId(chapter.id)}
                       onDragOver={(event) => event.preventDefault()}
@@ -156,27 +243,6 @@ export const Explorer = ({
                       <span className="tree-meta">
                         {chapter.wordCount}字 · {statusLabels[chapter.status]}
                       </span>
-                      <div className="tree-item-actions">
-                        <button
-                          className="ghost-button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            const next = window.prompt('章节名', chapter.title)
-                            if (next) onRenameChapter(chapter.id, next)
-                          }}
-                        >
-                          改名
-                        </button>
-                        <button
-                          className="ghost-button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onDeleteChapter(chapter.id)
-                          }}
-                        >
-                          删除
-                        </button>
-                      </div>
                     </div>
                   ))}
                 {filteredChapters.filter((chapter) => chapter.volumeId === volume.id).length === 0 && (
@@ -186,6 +252,53 @@ export const Explorer = ({
             </div>
           ))}
       </div>
+
+      {/* Volume Context Menu */}
+      {volumeMenu.isOpen && (
+        <ContextMenu
+          position={volumeMenu.position}
+          onClose={volumeMenu.closeMenu}
+          items={getVolumeMenuItems(activeVolumeForMenu)}
+        />
+      )}
+
+      {/* Chapter Context Menu */}
+      {chapterMenu.isOpen && (
+        <ContextMenu
+          position={chapterMenu.position}
+          onClose={chapterMenu.closeMenu}
+          items={getChapterMenuItems(activeChapterForMenu)}
+        />
+      )}
+
+      {/* Rename Modal */}
+      <Modal
+        open={renameTarget !== null}
+        onClose={handleCloseRenameModal}
+        title={renameTarget?.type === 'volume' ? '重命名卷' : '重命名章节'}
+      >
+        <div className="rename-modal-content">
+          <Input
+            label={renameTarget?.type === 'volume' ? '卷名' : '章节名'}
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleConfirmRename()
+              }
+            }}
+            autoFocus
+          />
+          <div className="rename-modal-actions">
+            <button className="ghost-button" onClick={handleCloseRenameModal}>
+              取消
+            </button>
+            <button className="mini-button" onClick={handleConfirmRename}>
+              确定
+            </button>
+          </div>
+        </div>
+      </Modal>
     </aside>
   )
 }

@@ -1,7 +1,20 @@
 import { useState } from 'react'
-import type { Chapter, Comment, Note, Provider, Agent, Block } from '../../types'
+import {
+  Edit3,
+  Maximize2,
+  Minimize2,
+  ArrowRight,
+  List,
+  CheckCircle,
+  Users,
+  Sparkles,
+  Globe,
+  RefreshCw
+} from 'lucide-react'
+import type { Chapter, Comment, Provider, Agent, Block } from '../../types'
 import type { AiAction } from '../../ai/aiService'
 import { getPlainTextFromBlock } from '../../utils/text'
+import { Accordion, Select, Button, Card } from './common'
 import './RightPanel.css'
 
 type RightPanelProps = {
@@ -19,12 +32,24 @@ type RightPanelProps = {
   onRefreshVersions: () => void
   comments: Comment[]
   onAddComment: (author: string, body: string) => void
-  notes: Note[]
-  onSaveNote: (note: Partial<Note>) => void
-  onDeleteNote: (noteId: string) => void
   aiLogs: string[]
   authorName: string
 }
+
+const AI_BLOCK_ACTIONS = [
+  { action: 'rewrite' as AiAction, label: '改写', icon: Edit3 },
+  { action: 'expand' as AiAction, label: '扩写', icon: Maximize2 },
+  { action: 'shorten' as AiAction, label: '缩写', icon: Minimize2 },
+  { action: 'continue' as AiAction, label: '续写', icon: ArrowRight }
+]
+
+const AI_CHAPTER_ACTIONS = [
+  { action: 'outline' as AiAction, label: '章节大纲', icon: List },
+  { action: 'chapterCheck' as AiAction, label: '连贯性检查', icon: CheckCircle },
+  { action: 'characterCheck' as AiAction, label: '角色一致性', icon: Users },
+  { action: 'styleTune' as AiAction, label: '风格润色', icon: Sparkles },
+  { action: 'worldbuilding' as AiAction, label: '设定扩展', icon: Globe }
+]
 
 export const RightPanel = ({
   chapter,
@@ -41,137 +66,113 @@ export const RightPanel = ({
   onRefreshVersions,
   comments,
   onAddComment,
-  notes,
-  onSaveNote,
-  onDeleteNote,
   aiLogs,
   authorName
 }: RightPanelProps) => {
   const [commentBody, setCommentBody] = useState('')
-  const [noteType, setNoteType] = useState<'character' | 'location' | 'lore' | 'reference'>('character')
-  const [noteTitle, setNoteTitle] = useState('')
+
+  const providerOptions = providers.map((p) => ({ value: p.id, label: p.name }))
+  const agentOptions = agents.map((a) => ({ value: a.id, label: a.name }))
 
   return (
     <aside className="right-panel">
-      <div className="panel-section">
-        <div className="panel-title">AI 执行器</div>
-        <div className="panel-body">
-          <label>
-            Provider
-            <select value={activeProviderId} onChange={(event) => onProviderChange(event.target.value)}>
-              {providers.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Agent
-            <select value={activeAgentId} onChange={(event) => onAgentChange(event.target.value)}>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
+      <Accordion title="AI 执行器" defaultOpen={true}>
+        <div className="ai-executor-content">
+          <Select
+            label="Provider"
+            options={providerOptions}
+            value={activeProviderId}
+            onChange={onProviderChange}
+          />
+          <Select
+            label="Agent"
+            options={agentOptions}
+            value={activeAgentId}
+            onChange={onAgentChange}
+          />
 
-      <div className="panel-section">
-        <div className="panel-title">块级 AI</div>
-        <div className="panel-body">
-          <div className="block-card">
+          <Card className="block-info-card">
             <div className="block-label">当前块</div>
             <div className="block-value">
               {selectedBlock?.type ?? '未选择'} · {getPlainTextFromBlock(selectedBlock).slice(0, 20)}
             </div>
-          </div>
-          <div className="action-grid">
-            <button className="action-button" onClick={() => onRunAiAction('rewrite')}>
-              改写
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('expand')}>
-              扩写
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('shorten')}>
-              缩写
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('continue')}>
-              续写
-            </button>
-          </div>
-        </div>
-      </div>
+          </Card>
 
-      <div className="panel-section">
-        <div className="panel-title">章节 AI</div>
-        <div className="panel-body">
-          <div className="action-grid">
-            <button className="action-button" onClick={() => onRunAiAction('outline')}>
-              章节大纲
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('chapterCheck')}>
-              连贯性检查
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('characterCheck')}>
-              角色一致性
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('styleTune')}>
-              风格润色
-            </button>
-            <button className="action-button" onClick={() => onRunAiAction('worldbuilding')}>
-              设定扩展
-            </button>
+          <div className="ai-section-title">块级 AI</div>
+          <div className="ai-action-grid">
+            {AI_BLOCK_ACTIONS.map(({ action, label, icon: Icon }) => (
+              <button
+                key={action}
+                className="ai-action-button"
+                onClick={() => onRunAiAction(action)}
+              >
+                <Icon size={16} />
+                <span>{label}</span>
+              </button>
+            ))}
           </div>
+
+          <div className="ai-section-title">章节 AI</div>
+          <div className="ai-action-grid">
+            {AI_CHAPTER_ACTIONS.map(({ action, label, icon: Icon }) => (
+              <button
+                key={action}
+                className="ai-action-button"
+                onClick={() => onRunAiAction(action)}
+              >
+                <Icon size={16} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="chapter-pill">
             当前章节：{chapter?.title ?? '未选择'}
           </div>
         </div>
-      </div>
+      </Accordion>
 
-      <div className="panel-section">
-        <div className="panel-title">版本历史</div>
-        <div className="panel-body">
-          <button className="ghost-button" onClick={onRefreshVersions}>
+      <Accordion title="版本历史" defaultOpen={false}>
+        <div className="version-content">
+          <Button variant="ghost" size="sm" onClick={onRefreshVersions}>
+            <RefreshCw size={14} />
             刷新版本
-          </button>
+          </Button>
           <div className="version-list">
             {versions.map((version) => (
               <div key={version.id} className="version-item">
                 <span>{version.createdAt}</span>
-                <button className="ghost-button" onClick={() => onRestoreVersion(version.id)}>
+                <Button variant="ghost" size="sm" onClick={() => onRestoreVersion(version.id)}>
                   回滚
-                </button>
+                </Button>
               </div>
             ))}
             {versions.length === 0 && <div className="empty-state">暂无版本</div>}
           </div>
         </div>
-      </div>
+      </Accordion>
 
-      <div className="panel-section">
-        <div className="panel-title">评论协作</div>
-        <div className="panel-body">
+      <Accordion title="评论协作" defaultOpen={false}>
+        <div className="comment-content">
           <div className="comment-list">
             {comments.map((comment) => (
               <div key={comment.id} className="comment-item">
                 <div className="comment-author">{comment.author}</div>
-                <div>{comment.body}</div>
+                <div className="comment-body">{comment.body}</div>
                 <div className="comment-time">{comment.createdAt}</div>
               </div>
             ))}
             {comments.length === 0 && <div className="empty-state">暂无评论</div>}
           </div>
           <textarea
+            className="comment-input"
             rows={3}
             placeholder="留下评论"
             value={commentBody}
             onChange={(event) => setCommentBody(event.target.value)}
           />
-          <button
-            className="primary-button"
+          <Button
+            variant="primary"
             onClick={() => {
               if (!commentBody.trim()) return
               onAddComment(authorName, commentBody.trim())
@@ -179,71 +180,22 @@ export const RightPanel = ({
             }}
           >
             发送评论
-          </button>
+          </Button>
         </div>
-      </div>
+      </Accordion>
 
-      <div className="panel-section">
-        <div className="panel-title">资料库</div>
-        <div className="panel-body">
-          <div className="note-toolbar">
-            <select
-              value={noteType}
-              onChange={(event) =>
-                setNoteType(event.target.value as 'character' | 'location' | 'lore' | 'reference')
-              }
-            >
-              <option value="character">角色卡</option>
-              <option value="location">地点</option>
-              <option value="lore">世界观</option>
-              <option value="reference">引用</option>
-            </select>
-            <input
-              placeholder="标题"
-              value={noteTitle}
-              onChange={(event) => setNoteTitle(event.target.value)}
-            />
-            <button
-              className="ghost-button"
-              onClick={() => {
-                if (!noteTitle.trim()) return
-                onSaveNote({ type: noteType, title: noteTitle.trim(), content: {} })
-                setNoteTitle('')
-              }}
-            >
-              + 新条目
-            </button>
-          </div>
-          <div className="note-list">
-            {notes
-              .filter((note) => note.type === noteType)
-              .map((note) => (
-                <div key={note.id} className="note-item">
-                  <span>{note.title}</span>
-                  <button className="ghost-button" onClick={() => onDeleteNote(note.id)}>
-                    删除
-                  </button>
-                </div>
-              ))}
-            {notes.filter((note) => note.type === noteType).length === 0 && (
-              <div className="empty-state">暂无条目</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="panel-section">
-        <div className="panel-title">AI 控制台</div>
-        <div className="panel-body">
+      <Accordion title="AI 控制台" defaultOpen={false}>
+        <div className="console-content">
           <div className="log-list">
             {aiLogs.map((entry, index) => (
               <div key={`${entry}-${index}`} className="log-item">
                 {entry}
               </div>
             ))}
+            {aiLogs.length === 0 && <div className="empty-state">暂无日志</div>}
           </div>
         </div>
-      </div>
+      </Accordion>
     </aside>
   )
 }
