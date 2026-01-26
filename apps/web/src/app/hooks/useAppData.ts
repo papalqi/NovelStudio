@@ -20,6 +20,7 @@ import {
   listComments,
   addComment
 } from '../../api'
+import { resolveApiBaseUrl } from '../../api/client'
 import { createId } from '../../utils/id'
 
 const CACHE_KEY = 'novelstudio.cache.v1'
@@ -59,7 +60,7 @@ export const useAppData = () => {
     offline: false
   })
 
-  const apiBaseUrl = state.settings?.sync.apiBaseUrl
+  const apiBaseUrl = resolveApiBaseUrl(state.settings?.sync.apiBaseUrl)
 
   const applyBootstrap = useCallback((payload: AppBootstrap, offline = false) => {
     setState({
