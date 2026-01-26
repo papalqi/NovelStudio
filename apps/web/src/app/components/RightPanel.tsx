@@ -11,7 +11,7 @@ import {
   Globe,
   RefreshCw
 } from 'lucide-react'
-import type { Chapter, Comment, Provider, Agent, Block, AiRunRecord } from '../../types'
+import type { Chapter, Comment, Provider, Agent, Block, AiRunRecord, ChapterVersion } from '../../types'
 import type { AiAction } from '../../ai/aiService'
 import { getPlainTextFromBlock } from '../../utils/text'
 import { formatLogEntry, type LogEntry } from '../../utils/logging'
@@ -28,7 +28,9 @@ type RightPanelProps = {
   onProviderChange: (id: string) => void
   onAgentChange: (id: string) => void
   onRunAiAction: (action: AiAction) => void
-  versions: { id: string; createdAt: string }[]
+  versions: ChapterVersion[]
+  activeDiffVersionId?: string
+  onCompareVersion: (versionId: string) => void
   onRestoreVersion: (versionId: string) => void
   onRefreshVersions: () => void
   comments: Comment[]
@@ -65,6 +67,8 @@ export const RightPanel = ({
   onAgentChange,
   onRunAiAction,
   versions,
+  activeDiffVersionId,
+  onCompareVersion,
   onRestoreVersion,
   onRefreshVersions,
   comments,
@@ -148,19 +152,35 @@ export const RightPanel = ({
             刷新版本
           </Button>
           <div className="version-list">
-            {versions.map((version) => (
-              <div key={version.id} className="version-item">
-                <span>{version.createdAt}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRestoreVersion(version.id)}
-                  data-testid={`version-restore-${version.id}`}
-                >
-                  回滚
-                </Button>
-              </div>
-            ))}
+            {versions.map((version) => {
+              const isActive = version.id === activeDiffVersionId
+              return (
+                <div key={version.id} className={`version-item ${isActive ? 'active' : ''}`}>
+                  <div className="version-meta">
+                    <span>{version.createdAt}</span>
+                    {isActive && <span className="version-status">对比中</span>}
+                  </div>
+                  <div className="version-actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCompareVersion(version.id)}
+                      data-testid={`version-compare-${version.id}`}
+                    >
+                      对比
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRestoreVersion(version.id)}
+                      data-testid={`version-restore-${version.id}`}
+                    >
+                      回滚
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
             {versions.length === 0 && <div className="empty-state">暂无版本</div>}
           </div>
         </div>

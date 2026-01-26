@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { BlockNoteView } from '@blocknote/mantine'
 import type { BlockNoteEditor } from '@blocknote/core'
-import type { Chapter, ChapterStatus } from '../../types'
+import type { Chapter, ChapterStatus, ChapterVersion } from '../../types'
+import { diffLines } from '../../utils/diff'
+import { getPlainTextFromDoc } from '../../utils/text'
 import './EditorPane.css'
 
 const statusOptions: { value: ChapterStatus; label: string }[] = [
@@ -12,6 +15,8 @@ const statusOptions: { value: ChapterStatus; label: string }[] = [
 type EditorPaneProps = {
   editor: BlockNoteEditor
   chapter: Chapter | null
+  diffVersion?: ChapterVersion | null
+  onExitDiff?: () => void
   onTitleChange: (title: string) => void
   onStatusChange: (status: ChapterStatus) => void
   onTagsChange: (tags: string[]) => void
@@ -25,6 +30,8 @@ type EditorPaneProps = {
 export const EditorPane = ({
   editor,
   chapter,
+  diffVersion,
+  onExitDiff,
   onTitleChange,
   onStatusChange,
   onTagsChange,
@@ -38,6 +45,71 @@ export const EditorPane = ({
     return (
       <section className="editor-area empty">
         <div className="empty-state">请选择一个章节开始写作</div>
+      </section>
+    )
+  }
+
+  const diffData = useMemo(() => {
+    if (!diffVersion) return null
+    const beforeText = getPlainTextFromDoc(diffVersion.snapshot?.content ?? [])
+    const afterText = getPlainTextFromDoc(chapter.content ?? [])
+    const beforeLines = beforeText.split(/\r?\n/)
+    const afterLines = afterText.split(/\r?\n/)
+    return diffLines(beforeLines, afterLines)
+  }, [diffVersion, chapter])
+
+  if (diffVersion && diffData) {
+    return (
+      <section className="editor-area diff-mode" data-testid="editor-diff-mode">
+        <div className="editor-toolbar diff-toolbar">
+          <div className="diff-title-group">
+            <div className="diff-title">版本对比</div>
+            <div className="diff-subtitle">
+              历史版本 {diffVersion.createdAt} · 当前章节 {chapter.updatedAt}
+            </div>
+            <div className="diff-legend">
+              <span className="diff-legend-item diff-legend-insert">新增</span>
+              <span className="diff-legend-item diff-legend-delete">删除</span>
+            </div>
+          </div>
+          <div className="toolbar-actions">
+            <button className="ghost-button" onClick={() => onExitDiff?.()} data-testid="editor-diff-exit">
+              退出对比
+            </button>
+          </div>
+        </div>
+        <div className={`editor-surface diff-surface ${editorWidth === 'center' ? 'center' : ''}`}>
+          <div className="diff-header-row">
+            <div className="diff-header-cell">
+              <span>历史版本</span>
+              <span className="diff-header-meta">{diffVersion.createdAt}</span>
+            </div>
+            <div className="diff-header-cell">
+              <span>当前内容</span>
+              <span className="diff-header-meta">{chapter.updatedAt}</span>
+            </div>
+          </div>
+          <div className="diff-body">
+            {diffData.rows.map((row, index) => (
+              <div key={`${row.type}-${index}`} className={`diff-row ${row.type}`}>
+                <div className="diff-cell diff-left">
+                  <span className="diff-line-no">{row.leftLine ?? ''}</span>
+                  <span className="diff-line-text">{row.left ?? ''}</span>
+                </div>
+                <div className="diff-cell diff-right">
+                  <span className="diff-line-no">{row.rightLine ?? ''}</span>
+                  <span className="diff-line-text">{row.right ?? ''}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {diffData.truncated && (
+            <div className="diff-truncated">
+              内容较大，仅展示前 {diffData.rows.length} 行差异（历史 {diffData.beforeLineCount} 行 / 当前{' '}
+              {diffData.afterLineCount} 行）。
+            </div>
+          )}
+        </div>
       </section>
     )
   }

@@ -58,6 +58,7 @@ export const App = () => {
   const [activeAgentId, setActiveAgentId] = useState('')
   const [aiLogs, setAiLogs] = useState<LogEntry[]>([])
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([])
+  const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
@@ -211,6 +212,10 @@ export const App = () => {
       })
   }, [resolvedChapterId, loadVersions, loadComments, settings?.sync.apiBaseUrl, pushLog])
 
+  useEffect(() => {
+    setDiffVersion(null)
+  }, [resolvedChapterId])
+
   const debouncedSave = useMemo(() => {
     return debounce((content: Block[]) => {
       if (!activeChapter || !settings?.autosave.enabled) return
@@ -268,6 +273,37 @@ export const App = () => {
   const handleSelectionChange = () => {
     const currentBlock = editor.getTextCursorPosition().block as Block
     setSelectedBlock(currentBlock ?? null)
+  }
+
+  const handleOpenDiff = (versionId: string) => {
+    const target = versions.find((version) => version.id === versionId)
+    if (!target) return
+    const requestId = createId()
+    setDiffVersion(target)
+    pushLog(
+      createLogEntry({
+        requestId,
+        scope: 'diff',
+        status: 'info',
+        message: '进入版本对比',
+        payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+      })
+    )
+  }
+
+  const handleExitDiff = () => {
+    if (!diffVersion) return
+    const requestId = createId()
+    setDiffVersion(null)
+    pushLog(
+      createLogEntry({
+        requestId,
+        scope: 'diff',
+        status: 'info',
+        message: '退出版本对比',
+        payloadSummary: `chapter=${resolvedChapterId} version=${diffVersion.id}`
+      })
+    )
   }
 
   const handleChapterMetaUpdate = (patch: Partial<Chapter>) => {
@@ -630,6 +666,8 @@ export const App = () => {
         <EditorPane
           editor={editor}
           chapter={activeChapter}
+          diffVersion={diffVersion}
+          onExitDiff={handleExitDiff}
           onTitleChange={(title) => handleChapterMetaUpdate({ title })}
           onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
           onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}
@@ -682,9 +720,12 @@ export const App = () => {
           onAgentChange={setActiveAgentId}
           onRunAiAction={handleRunAiAction}
           versions={versions}
+          activeDiffVersionId={diffVersion?.id}
+          onCompareVersion={handleOpenDiff}
           onRestoreVersion={(versionId) =>
             resolvedChapterId &&
             (() => {
+              setDiffVersion(null)
               const requestId = createId()
               const startedAt = nowMs()
               return restoreChapterVersion(resolvedChapterId, versionId)
