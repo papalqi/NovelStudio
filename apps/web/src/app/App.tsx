@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateBlockNote } from '@blocknote/react'
 import { TopBar } from './components/TopBar'
 import { Explorer } from './components/Explorer'
@@ -9,7 +9,10 @@ import { PreviewModal } from './components/PreviewModal'
 import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
 import { useAppData } from './hooks/useAppData'
 import { debounce } from '../utils/debounce'
+import { createId } from '../utils/id'
 import { estimateWordCount, getPlainTextFromBlock } from '../utils/text'
+import { nowMs } from '../utils/time'
+import { createLogEntry, type LogEntry } from '../utils/logging'
 import { runAiAction, type AiAction } from '../ai/aiService'
 import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note } from '../types'
 import './App.css'
@@ -52,7 +55,7 @@ export const App = () => {
   const [comments, setComments] = useState<Comment[]>([])
   const [activeProviderId, setActiveProviderId] = useState('')
   const [activeAgentId, setActiveAgentId] = useState('')
-  const [aiLogs, setAiLogs] = useState<string[]>([])
+  const [aiLogs, setAiLogs] = useState<LogEntry[]>([])
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
@@ -129,15 +132,56 @@ export const App = () => {
     removeNoteItem(noteId)
   }
 
+  const pushLog = useCallback((entry: LogEntry) => {
+    setAiLogs((prev) => [entry, ...prev].slice(0, 12))
+  }, [])
+
   const debouncedSave = useMemo(() => {
     return debounce((content: Block[]) => {
       if (!activeChapter || !settings?.autosave.enabled) return
+      const requestId = createId()
+      const startedAt = nowMs()
       const wordCount = estimateWordCount(content)
-      void saveChapterContent(activeChapter.id, content, wordCount, formatDate()).catch((error) => {
-        setAiLogs((prev) => [`保存失败：${error.message}`, ...prev].slice(0, 12))
-      })
+      void saveChapterContent(activeChapter.id, content, wordCount, formatDate())
+        .then(() => {
+          pushLog(
+            createLogEntry({
+              requestId,
+              scope: 'autosave',
+              status: 'success',
+              message: '自动保存成功',
+              durationMs: nowMs() - startedAt,
+              payloadSummary: `chapter=${activeChapter.id} words=${wordCount}`
+            })
+          )
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : '保存失败'
+          pushLog(
+            createLogEntry({
+              requestId,
+              scope: 'autosave',
+              status: 'error',
+              message: `保存失败：${message}`,
+              durationMs: nowMs() - startedAt,
+              payloadSummary: `chapter=${activeChapter.id} words=${wordCount}`
+            })
+          )
+          if (/409|conflict|冲突/i.test(message)) {
+            pushLog(
+              createLogEntry({
+                requestId,
+                scope: 'conflict',
+                status: 'warn',
+                message: '检测到可能的保存冲突',
+                durationMs: nowMs() - startedAt,
+                payloadSummary: `chapter=${activeChapter.id}`
+              })
+            )
+          }
+        })
     }, settings?.autosave.intervalMs ?? 1200)
-  }, [activeChapter, saveChapterContent, settings])
+  }, [activeChapter, saveChapterContent, settings, pushLog])
 
   const handleContentChange = () => {
     if (switchingRef.current) return
@@ -183,7 +227,16 @@ export const App = () => {
   const handleRunAiAction = async (action: AiAction) => {
     if (!settings) return
     if (!activeChapter) {
-      setAiLogs((prev) => ['请先选择章节', ...prev])
+      const requestId = createId()
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'warn',
+          message: '请先选择章节',
+          payloadSummary: `action=${action}`
+        })
+      )
       return
     }
     const currentDoc = editor.document as Block[]
@@ -194,9 +247,22 @@ export const App = () => {
         : (editor.blocksToMarkdownLossy(currentDoc) as string)
 
     if (!content) {
-      setAiLogs((prev) => ['没有可用文本', ...prev])
+      const requestId = createId()
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'warn',
+          message: '没有可用文本',
+          payloadSummary: `action=${action} chapter=${activeChapter.id}`
+        })
+      )
       return
     }
+
+    const requestId = createId()
+    const requestStartedAt = nowMs()
+    const payloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
 
     try {
       const response = await runAiAction({
@@ -225,10 +291,48 @@ export const App = () => {
           )
         }
       }
-      setAiLogs((prev) => [`${response.label} 完成`, ...prev].slice(0, 12))
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'success',
+          message: `${response.label} 完成`,
+            durationMs: nowMs() - requestStartedAt,
+          payloadSummary
+        })
+      )
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'agent',
+          status: 'success',
+          message: `Agent 执行完成`,
+            durationMs: nowMs() - requestStartedAt,
+          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action}`
+        })
+      )
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'AI 调用失败'
-      setAiLogs((prev) => [`AI 失败：${message}`, ...prev])
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'error',
+          message: `AI 失败：${message}`,
+            durationMs: nowMs() - requestStartedAt,
+          payloadSummary
+        })
+      )
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'agent',
+          status: 'error',
+          message: `Agent 执行失败：${message}`,
+            durationMs: nowMs() - requestStartedAt,
+          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action}`
+        })
+      )
     }
   }
 
@@ -306,7 +410,35 @@ export const App = () => {
           onTargetWordCountChange={(target) => handleChapterMetaUpdate({ targetWordCount: target })}
           onCreateVersion={() => {
             if (!activeChapter) return
-            createChapterVersion(activeChapter).then(setVersions)
+            const requestId = createId()
+            const startedAt = nowMs()
+            createChapterVersion(activeChapter)
+              .then((nextVersions) => {
+                setVersions(nextVersions)
+                pushLog(
+                  createLogEntry({
+                    requestId,
+                    scope: 'diff',
+                    status: 'success',
+                    message: '创建版本快照成功',
+                    durationMs: nowMs() - startedAt,
+                    payloadSummary: `chapter=${activeChapter.id}`
+                  })
+                )
+              })
+              .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : '创建版本失败'
+                pushLog(
+                  createLogEntry({
+                    requestId,
+                    scope: 'diff',
+                    status: 'error',
+                    message: `创建版本失败：${message}`,
+                    durationMs: nowMs() - startedAt,
+                    payloadSummary: `chapter=${activeChapter.id}`
+                  })
+                )
+              })
           }}
           onSelectionChange={handleSelectionChange}
           onContentChange={handleContentChange}
@@ -325,11 +457,79 @@ export const App = () => {
           onRunAiAction={handleRunAiAction}
           versions={versions}
           onRestoreVersion={(versionId) =>
-            resolvedChapterId && restoreChapterVersion(resolvedChapterId, versionId).then((chapter) => {
-              if (chapter) setActiveChapterId(chapter.id)
-            })
+            resolvedChapterId &&
+            (() => {
+              const requestId = createId()
+              const startedAt = nowMs()
+              return restoreChapterVersion(resolvedChapterId, versionId)
+                .then((chapter) => {
+                  if (chapter) {
+                    setActiveChapterId(chapter.id)
+                    pushLog(
+                      createLogEntry({
+                        requestId,
+                        scope: 'diff',
+                        status: 'success',
+                        message: '版本回滚成功',
+                        durationMs: nowMs() - startedAt,
+                        payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+                      })
+                    )
+                  }
+                  return chapter
+                })
+                .catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : '版本回滚失败'
+                  pushLog(
+                    createLogEntry({
+                      requestId,
+                      scope: 'diff',
+                      status: 'error',
+                      message: `版本回滚失败：${message}`,
+                      durationMs: nowMs() - startedAt,
+                      payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+                    })
+                  )
+                  throw error
+                })
+            })()
           }
-          onRefreshVersions={() => resolvedChapterId && loadVersions(resolvedChapterId).then(setVersions)}
+          onRefreshVersions={() =>
+            resolvedChapterId &&
+            (() => {
+              const requestId = createId()
+              const startedAt = nowMs()
+              return loadVersions(resolvedChapterId)
+                .then((nextVersions) => {
+                  setVersions(nextVersions)
+                  pushLog(
+                    createLogEntry({
+                      requestId,
+                      scope: 'diff',
+                      status: 'success',
+                      message: '刷新版本成功',
+                      durationMs: nowMs() - startedAt,
+                      payloadSummary: `chapter=${resolvedChapterId} count=${nextVersions.length}`
+                    })
+                  )
+                  return nextVersions
+                })
+                .catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : '刷新版本失败'
+                  pushLog(
+                    createLogEntry({
+                      requestId,
+                      scope: 'diff',
+                      status: 'error',
+                      message: `刷新版本失败：${message}`,
+                      durationMs: nowMs() - startedAt,
+                      payloadSummary: `chapter=${resolvedChapterId}`
+                    })
+                  )
+                  throw error
+                })
+            })()
+          }
           comments={comments}
           onAddComment={(author, body) =>
             resolvedChapterId && addChapterComment(resolvedChapterId, author, body).then(setComments)

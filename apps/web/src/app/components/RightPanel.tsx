@@ -14,6 +14,7 @@ import {
 import type { Chapter, Comment, Provider, Agent, Block } from '../../types'
 import type { AiAction } from '../../ai/aiService'
 import { getPlainTextFromBlock } from '../../utils/text'
+import { formatLogEntry, type LogEntry } from '../../utils/logging'
 import { Accordion, Select, Button, Card } from './common'
 import './RightPanel.css'
 
@@ -32,7 +33,7 @@ type RightPanelProps = {
   onRefreshVersions: () => void
   comments: Comment[]
   onAddComment: (author: string, body: string) => void
-  aiLogs: string[]
+  aiLogs: LogEntry[]
   authorName: string
 }
 
@@ -198,9 +199,9 @@ export const RightPanel = ({
       <Accordion title="AI 控制台" defaultOpen={false}>
         <div className="console-content">
           <div className="log-list">
-            {aiLogs.map((entry, index) => (
-              <div key={`${entry}-${index}`} className="log-item">
-                {entry}
+            {aiLogs.map((entry) => (
+              <div key={entry.id} className="log-item">
+                {formatLogEntry(entry)}
               </div>
             ))}
             {aiLogs.length === 0 && <div className="empty-state">暂无日志</div>}
