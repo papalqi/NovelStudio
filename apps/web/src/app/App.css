@@ -1,17 +1,27 @@
 /**
  * App 布局样式
  * 使用 variables.css 中定义的 CSS 变量
+ *
+ * 响应式断点:
+ * - xs:  320px - 480px  (超小屏幕/手机竖屏)
+ * - sm:  481px - 640px  (小屏幕/手机横屏)
+ * - md:  641px - 768px  (中等屏幕/平板竖屏)
+ * - lg:  769px - 1024px (大屏幕/平板横屏)
+ * - xl:  1025px - 1280px (超大屏幕/小桌面)
+ * - 2xl: 1281px+        (超超大屏幕/大桌面)
  */
 
 /* ============================================
  * App Shell 布局
  * ============================================ */
 .app-shell {
+  min-width: 320px;
   min-height: 100vh;
   display: grid;
   grid-template-rows: 64px 1fr 32px;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
+  overflow-x: hidden;
 }
 
 /* ============================================
@@ -89,7 +99,16 @@
  * 响应式断点
  * ============================================ */
 
-/* 大屏幕 (<=1280px): 隐藏右侧面板 */
+/* 2xl 超超大屏幕 (>=1536px): 宽敞布局 */
+@media (min-width: 1536px) {
+  .workspace {
+    grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr) var(--sidebar-width-wide);
+    gap: var(--space-6);
+    padding: var(--space-5) var(--space-8);
+  }
+}
+
+/* xl 超大屏幕 (<=1280px): 隐藏右侧面板 */
 @media (max-width: 1280px) {
   .workspace {
     grid-template-columns: var(--sidebar-width-default) minmax(0, 1fr);
@@ -100,7 +119,7 @@
   }
 }
 
-/* 中等屏幕 (<=1024px): 收窄侧边栏 */
+/* lg 大屏幕 (<=1024px): 收窄侧边栏 */
 @media (max-width: 1024px) {
   .workspace {
     grid-template-columns: 200px minmax(0, 1fr);
@@ -109,7 +128,7 @@
   }
 }
 
-/* 小屏幕 (<=768px): 单列布局 */
+/* md 中等屏幕 (<=768px): 单列布局 */
 @media (max-width: 768px) {
   .app-shell {
     grid-template-rows: 56px 1fr 28px;
@@ -127,9 +146,14 @@
   .editor-area {
     order: 1;
   }
+
+  .status-bar {
+    font-size: 11px;
+    padding: 0 var(--space-3);
+  }
 }
 
-/* 超小屏幕 (<=640px): 移动端优化 */
+/* sm 小屏幕 (<=640px): 移动端优化 */
 @media (max-width: 640px) {
   .workspace {
     padding: var(--space-2);
@@ -141,5 +165,37 @@
   .mini-button {
     padding: var(--space-2) var(--space-3);
     font-size: 14px;
+    /* 增大触控区域 */
+    min-height: 44px;
   }
+}
+
+/* xs 超小屏幕 (<=480px): 最小设备 */
+@media (max-width: 480px) {
+  .app-shell {
+    grid-template-rows: 48px 1fr 24px;
+  }
+
+  .workspace {
+    padding: var(--space-1);
+    gap: var(--space-1);
+  }
+
+  .status-bar {
+    font-size: 10px;
+    padding: 0 var(--space-2);
+  }
+}
+
+/* ============================================
+ * 深色模式优化
+ * ============================================ */
+html[data-theme='dark'] .app-shell {
+  /* 深色模式下增强边界感 */
+  border-color: var(--color-border-secondary);
+}
+
+html[data-theme='dark'] .status-bar {
+  background: var(--color-bg-secondary);
+  border-top-color: var(--color-border-primary);
 }

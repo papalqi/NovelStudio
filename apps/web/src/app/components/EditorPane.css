@@ -1,35 +1,50 @@
+/**
+ * EditorPane - macOS Sonoma 风格编辑器样式
+ * 使用 variables.css 中定义的 CSS 变量
+ */
+
+/* ============================================
+ * 编辑器区域布局
+ * ============================================ */
 .editor-area {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .editor-area.empty {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
 }
 
+/* ============================================
+ * 编辑器工具栏
+ * ============================================ */
 .editor-toolbar {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 12px 16px;
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .chapter-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 240px;
 }
 
@@ -39,39 +54,63 @@
   border: none;
   background: transparent;
   outline: none;
-  color: var(--ink);
+  color: var(--color-text-primary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.chapter-title-input:focus {
+  color: var(--color-accent);
 }
 
 .chapter-meta {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
 }
 
+/* ============================================
+ * 进度条
+ * ============================================ */
 .progress-bar {
   width: 240px;
   height: 6px;
-  background: #f1e5d7;
-  border-radius: 999px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
   overflow: hidden;
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f3a65b, #d86b1f);
+  background: linear-gradient(90deg, var(--color-warning), var(--color-accent));
+  border-radius: var(--radius-full);
+  transition: width var(--duration-slow) var(--ease-out);
 }
 
+/* ============================================
+ * 工具栏操作区
+ * ============================================ */
 .toolbar-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 
 .toolbar-actions select,
 .toolbar-actions input {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #e4d5c3;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
   font-size: 12px;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.toolbar-actions select:focus,
+.toolbar-actions input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 
 .tags-input {
@@ -82,25 +121,50 @@
   width: 80px;
 }
 
+/* ============================================
+ * 编辑器主体
+ * ============================================ */
 .editor-surface {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  padding: var(--space-3);
   flex: 1;
   min-height: 0;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .editor-surface .bn-editor {
   min-height: 100%;
-  background: #fffdf9;
-  border-radius: 12px;
-  padding: 24px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
   font-size: 15px;
+  color: var(--color-text-primary);
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
+/* 居中模式 - max-width: 900px */
 .editor-surface.center .bn-editor {
-  max-width: 760px;
+  max-width: 900px;
   margin: 0 auto;
+}
+
+/* ============================================
+ * 深色模式增强
+ * ============================================ */
+html[data-theme='dark'] .editor-toolbar {
+  background: var(--color-glass-bg);
+  border-color: var(--color-glass-border);
+}
+
+html[data-theme='dark'] .editor-surface .bn-editor {
+  background: var(--color-bg-tertiary);
+}
+
+html[data-theme='dark'] .toolbar-actions select,
+html[data-theme='dark'] .toolbar-actions input {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-secondary);
 }

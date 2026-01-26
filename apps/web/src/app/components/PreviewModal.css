@@ -1,49 +1,260 @@
+/**
+ * PreviewModal - macOS Sonoma 风格预览模态框
+ */
+
+/* ============================================
+ * 遮罩层
+ * ============================================ */
 .preview-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 18, 16, 0.5);
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 30;
+  z-index: 1000;
+  animation: previewBackdropFadeIn 0.2s ease;
 }
 
+@keyframes previewBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+ * 面板主体
+ * ============================================ */
 .preview-panel {
   width: min(960px, 90vw);
   max-height: 90vh;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e6e0d6;
-  box-shadow: 0 30px 60px rgba(20, 18, 16, 0.2);
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  animation: previewPanelSlideIn 0.25s ease;
 }
 
+@keyframes previewPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ============================================
+ * 头部
+ * ============================================ */
 .preview-panel header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #efe6d9;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-separator);
+  background: rgba(255, 255, 255, 0.3);
 }
 
+html[data-theme='dark'] .preview-panel header {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.preview-panel header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* ============================================
+ * 操作按钮区
+ * ============================================ */
 .preview-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-2);
 }
 
+.preview-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.preview-tab-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+}
+
+.preview-tab-btn.active {
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border-color: transparent;
+}
+
+.preview-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.preview-action-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.preview-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.preview-close-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+}
+
+/* ============================================
+ * 内容区
+ * ============================================ */
 .preview-body {
-  padding: 16px 20px;
+  flex: 1;
+  padding: var(--space-5);
   overflow-y: auto;
+  color: var(--color-text-primary);
+  font-size: 14px;
 }
 
 .preview-html {
-  line-height: 1.7;
+  line-height: 1.8;
+}
+
+.preview-html h1,
+.preview-html h2,
+.preview-html h3 {
+  font-weight: 600;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+}
+
+.preview-html h1 {
+  font-size: 24px;
+}
+
+.preview-html h2 {
+  font-size: 20px;
+}
+
+.preview-html h3 {
+  font-size: 17px;
+}
+
+.preview-html p {
+  margin-bottom: var(--space-4);
 }
 
 .preview-body pre {
   white-space: pre-wrap;
-  background: #f7efe6;
-  padding: 16px;
-  border-radius: 12px;
+  word-wrap: break-word;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  overflow-x: auto;
+}
+
+/* ============================================
+ * 响应式设计 - 移动端全屏
+ * ============================================ */
+@media (max-width: 640px) {
+  .preview-panel {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .preview-panel header {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .preview-panel header h2 {
+    font-size: 15px;
+  }
+
+  .preview-actions {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .preview-tab-btn,
+  .preview-action-btn {
+    padding: var(--space-1) var(--space-2);
+    font-size: 12px;
+  }
+
+  .preview-body {
+    padding: var(--space-4);
+  }
+}
+
+/* ============================================
+ * 深色模式
+ * ============================================ */
+html[data-theme='dark'] .preview-panel {
+  background: var(--color-glass-bg);
+  border-color: var(--color-glass-border);
+}
+
+html[data-theme='dark'] .preview-body pre {
+  background: var(--color-bg-tertiary);
 }
