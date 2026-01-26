@@ -75,6 +75,16 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
     onBack()
   }
 
+  const getSchemaError = (schema?: string) => {
+    if (!schema?.trim()) return ''
+    try {
+      JSON.parse(schema)
+      return ''
+    } catch {
+      return 'Schema JSON 格式错误'
+    }
+  }
+
   const renderProfileSection = () => (
     <div className="settings-content-inner">
       <Card>
@@ -241,7 +251,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
     <div className="settings-content-inner">
       <Card header="Agent 列表">
         <div className="settings-group">
-          {draft.agents.map((agent) => (
+          {draft.agents.map((agent, index) => (
             <div key={agent.id} className="settings-item-card">
               <div className="settings-item-header">
                 <Input
@@ -272,12 +282,39 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   label="Provider"
                   testId={`settings-agent-provider-${agent.id}`}
                 />
+                <div className="settings-row">
+                  <span className="settings-row-label">串行执行</span>
+                  <div className="settings-row-control">
+                    <Toggle
+                      checked={agent.serialEnabled ?? false}
+                      onChange={(e) => updateAgent(agent.id, { serialEnabled: e.target.checked })}
+                      data-testid={`settings-agent-serial-${agent.id}`}
+                    />
+                  </div>
+                </div>
+                <Input
+                  type="number"
+                  value={agent.serialOrder ?? index + 1}
+                  onChange={(e) => updateAgent(agent.id, { serialOrder: Number(e.target.value) })}
+                  min="1"
+                  step="1"
+                  label="串行顺序"
+                  data-testid={`settings-agent-serial-order-${agent.id}`}
+                />
                 <Input
                   value={agent.systemPrompt}
                   onChange={(e) => updateAgent(agent.id, { systemPrompt: e.target.value })}
                   placeholder="输入系统提示词..."
                   label="System Prompt"
                   data-testid={`settings-agent-prompt-${agent.id}`}
+                />
+                <Input
+                  value={agent.outputSchema ?? ''}
+                  onChange={(e) => updateAgent(agent.id, { outputSchema: e.target.value })}
+                  placeholder='{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}'
+                  label="输出 Schema (JSON)"
+                  error={getSchemaError(agent.outputSchema) || undefined}
+                  data-testid={`settings-agent-schema-${agent.id}`}
                 />
               </div>
             </div>

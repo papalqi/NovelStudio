@@ -39,6 +39,9 @@ export type Agent = {
   name: string
   providerId: string
   systemPrompt: string
+  outputSchema?: string
+  serialEnabled?: boolean
+  serialOrder?: number
 }
 
 export type AiRequestSettings = {
