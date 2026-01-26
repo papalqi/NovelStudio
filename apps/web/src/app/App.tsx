@@ -7,12 +7,12 @@ import { RightPanel } from './components/RightPanel'
 import { SettingsPage } from './components/SettingsPage'
 import { PreviewModal } from './components/PreviewModal'
 import { ConflictModal } from './components/ConflictModal'
-import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
+import { KnowledgeBasePage } from './components/KnowledgeBasePage'
 import { useAppData } from './hooks/useAppData'
 import { useConflictHandler } from './hooks/useConflictHandler'
+import { useChapterBulkActions } from './hooks/useChapterBulkActions'
 import { debounce } from '../utils/debounce'
 import { createId } from '../utils/id'
-import { cloneBlocks } from '../utils/blocks'
 import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
 import { nowMs } from '../utils/time'
 import { createLogEntry, type LogEntry } from '../utils/logging'
@@ -21,7 +21,7 @@ import { createAiRun, listAiRuns } from '../api'
 import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note, AiRunRecord } from '../types'
 import './App.css'
 
-type AppPage = 'editor' | 'settings'
+type AppPage = 'editor' | 'settings' | 'knowledge'
 
 const formatDate = () => new Date().toISOString().slice(0, 10)
 
@@ -66,7 +66,6 @@ export const App = () => {
   const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
 
   const switchingRef = useRef(false)
 
@@ -115,7 +114,7 @@ export const App = () => {
     switchingRef.current = false
   }, [activeChapter, editor])
 
-  // Load notes data for Knowledge Base Drawer
+  // Load notes data for Knowledge Base Page
   useEffect(() => {
     refreshNotes()
   }, [refreshNotes])
@@ -134,6 +133,112 @@ export const App = () => {
     removeNoteItem(noteId)
   }
 
+  const noteTypeLabels: Record<Note['type'], string> = {
+    character: '角色',
+    location: '地点',
+    lore: '世界观',
+    reference: '引用'
+  }
+
+  const buildNoteSnapshot = (note: Note) => {
+    const description = typeof note.content.description === 'string' ? note.content.description.trim() : ''
+    if (description) return description
+    const fallback = Object.values(note.content).find(
+      (value) => typeof value === 'string' && value.trim().length > 0
+    )
+    if (typeof fallback === 'string') return fallback.trim()
+    return '（资料卡内容为空）'
+  }
+
+  const buildReferenceHeader = (note: Note) => {
+    const typeLabel = noteTypeLabels[note.type]
+    const suffix = typeLabel ? `${note.title}（${typeLabel}）` : note.title
+    return `【资料卡引用 kb:${note.id}】${suffix}`
+  }
+
+  const parseReferenceId = (content: string) => {
+    const match = content.match(/^【资料卡引用 kb:([A-Za-z0-9-]+)】/)
+    return match ? match[1] : null
+  }
+
+  const handleInsertNote = (note: Note) => {
+    if (!activeChapter) {
+      pushLog(
+        createLogEntry({
+          scope: 'system',
+          status: 'warn',
+          message: '请先选择章节再插入资料卡',
+          payloadSummary: `note=${note.id}`
+        })
+      )
+      return
+    }
+    const description = buildNoteSnapshot(note)
+    const headerLabel = buildReferenceHeader(note)
+    const blocks: Block[] = [
+      { id: createId(), type: 'heading', content: headerLabel },
+      { id: createId(), type: 'paragraph', content: description }
+    ]
+    const currentDoc = editor.document as Block[]
+    const cursorBlock = editor.getTextCursorPosition().block as Block
+    const referenceId = cursorBlock?.id ?? currentDoc[currentDoc.length - 1]?.id
+    if (referenceId) {
+      editor.insertBlocks(blocks, referenceId, 'after')
+    }
+    pushLog(
+      createLogEntry({
+        scope: 'system',
+        status: 'success',
+        message: '资料卡已插入到章节',
+        payloadSummary: `chapter=${activeChapter.id} note=${note.id}`
+      })
+    )
+  }
+
+  const handleRefreshReferences = () => {
+    if (!activeChapter) {
+      pushLog(
+        createLogEntry({
+          scope: 'knowledge',
+          status: 'warn',
+          message: '请先选择章节再刷新引用',
+          payloadSummary: 'refresh=skipped'
+        })
+      )
+      return
+    }
+    const currentDoc = editor.document as Block[]
+    let refreshed = 0
+    currentDoc.forEach((block, index) => {
+      if (block.type !== 'heading' || typeof block.content !== 'string') return
+      const noteId = parseReferenceId(block.content)
+      if (!noteId) return
+      const note = notes.find((item) => item.id === noteId)
+      if (!note) return
+      const nextBlock = currentDoc[index + 1]
+      const header = buildReferenceHeader(note)
+      const snapshot = buildNoteSnapshot(note)
+      if (block.content !== header) {
+        editor.updateBlock(block.id, { content: header })
+      }
+      if (nextBlock?.type === 'paragraph' && typeof nextBlock.content === 'string' && nextBlock.content !== snapshot) {
+        editor.updateBlock(nextBlock.id, { content: snapshot })
+      }
+      refreshed += 1
+    })
+    if (refreshed > 0) {
+      handleContentChange()
+    }
+    pushLog(
+      createLogEntry({
+        scope: 'knowledge',
+        status: 'success',
+        message: refreshed > 0 ? `已刷新 ${refreshed} 条引用` : '未发现可刷新引用',
+        payloadSummary: `chapter=${activeChapter.id}`
+      })
+    )
+  }
+
   const pushLog = useCallback((entry: LogEntry) => {
     setAiLogs((prev) => [entry, ...prev].slice(0, 12))
   }, [])
@@ -148,6 +253,13 @@ export const App = () => {
       pushLog,
       onVersionsUpdated: setVersions
     })
+
+  const { handleBatchCopyChapters, handleBatchMoveChapters, handleBatchMergeChapters } = useChapterBulkActions({
+    chapters,
+    createChapterWithContent,
+    saveChapter,
+    removeChapter
+  })
 
   const AI_ACTIONS: AiAction[] = [
     'rewrite',
@@ -352,80 +464,6 @@ export const App = () => {
     const target = ordered[targetIndex]
     void upsertVolume({ ...current, orderIndex: targetIndex })
     void upsertVolume({ ...target, orderIndex: index })
-  }
-
-  const handleBatchCopyChapters = async (chapterIds: string[], targetVolumeId: string) => {
-    if (!targetVolumeId || chapterIds.length === 0) return
-    const selected = chapters
-      .filter((chapter) => chapterIds.includes(chapter.id))
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-    const targetChapters = chapters.filter((chapter) => chapter.volumeId === targetVolumeId)
-    let nextIndex = targetChapters.reduce((max, chapter) => Math.max(max, chapter.orderIndex), -1) + 1
-    let copyIndex = 1
-    for (const chapter of selected) {
-      const suffix = selected.length > 1 ? ` ${copyIndex}` : ''
-      await createChapterWithContent({
-        volumeId: targetVolumeId,
-        title: `${chapter.title} 副本${suffix}`,
-        status: chapter.status,
-        tags: [...chapter.tags],
-        wordCount: chapter.wordCount,
-        targetWordCount: chapter.targetWordCount,
-        orderIndex: nextIndex,
-        content: cloneBlocks(chapter.content)
-      })
-      nextIndex += 1
-      copyIndex += 1
-    }
-  }
-
-  const handleBatchMoveChapters = async (chapterIds: string[], targetVolumeId: string) => {
-    if (!targetVolumeId || chapterIds.length === 0) return
-    const selected = chapters
-      .filter((chapter) => chapterIds.includes(chapter.id))
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-    const targetChapters = chapters.filter(
-      (chapter) => chapter.volumeId === targetVolumeId && !chapterIds.includes(chapter.id)
-    )
-    let nextIndex = targetChapters.reduce((max, chapter) => Math.max(max, chapter.orderIndex), -1) + 1
-    for (const chapter of selected) {
-      await saveChapter({ ...chapter, volumeId: targetVolumeId, orderIndex: nextIndex })
-      nextIndex += 1
-    }
-  }
-
-  const handleBatchMergeChapters = async (chapterIds: string[], targetVolumeId: string, title: string) => {
-    if (!targetVolumeId || chapterIds.length === 0) return
-    const selected = chapters
-      .filter((chapter) => chapterIds.includes(chapter.id))
-      .sort((a, b) => (a.volumeId === b.volumeId ? a.orderIndex - b.orderIndex : a.volumeId.localeCompare(b.volumeId)))
-    if (selected.length < 2) return
-    const mergedBlocks: Block[] = []
-    selected.forEach((chapter, index) => {
-      mergedBlocks.push({ id: createId(), type: 'heading', content: chapter.title })
-      mergedBlocks.push(...cloneBlocks(chapter.content))
-      if (index < selected.length - 1) {
-        mergedBlocks.push({ id: createId(), type: 'paragraph', content: '' })
-      }
-    })
-    const mergedTags = Array.from(new Set(selected.flatMap((chapter) => chapter.tags)))
-    const base = selected[0]
-    const wordCount = estimateWordCount(mergedBlocks)
-    const targetChapters = chapters.filter((chapter) => chapter.volumeId === targetVolumeId)
-    const nextIndex = targetChapters.reduce((max, chapter) => Math.max(max, chapter.orderIndex), -1) + 1
-    await createChapterWithContent({
-      volumeId: targetVolumeId,
-      title: title.trim() || `${base.title} 合并`,
-      status: base.status,
-      tags: mergedTags,
-      wordCount,
-      targetWordCount: base.targetWordCount,
-      orderIndex: nextIndex,
-      content: mergedBlocks
-    })
-    for (const chapter of selected) {
-      await removeChapter(chapter.id)
-    }
   }
 
   const handleRunAiAction = async (action: AiAction, requestedBlockId?: string): Promise<boolean> => {
@@ -754,202 +792,219 @@ export const App = () => {
         onOpenPreview={() => setPreviewOpen(true)}
         onManualSync={handleManualSync}
         autosaveEnabled={settings?.autosave.enabled ?? true}
-        onOpenKnowledgeBase={() => setKnowledgeBaseOpen(true)}
+        onOpenKnowledgeBase={() => setCurrentPage('knowledge')}
         theme={settings?.ui.theme ?? 'light'}
         onToggleTheme={handleToggleTheme}
       />
 
-      <main className="workspace">
-        <Explorer
-          volumes={volumes}
-          chapters={chapters}
-          activeVolumeId={resolvedVolumeId}
-          activeChapterId={resolvedChapterId}
-          onSelectVolume={setActiveVolumeId}
-          onSelectChapter={setActiveChapterId}
-          onCreateChapter={(volumeId) =>
-            createNewChapter(volumeId, `第${chapters.length + 1}章 新章节`).then((chapter) =>
-              setActiveChapterId(chapter.id)
-            )
-          }
-          onCreateVolume={() =>
-            createNewVolume(`新卷 ${volumes.length + 1}`).then((volume) => setActiveVolumeId(volume.id))
-          }
-          onRenameVolume={(id, title) => {
-            const volume = volumes.find((item) => item.id === id)
-            if (volume) upsertVolume({ ...volume, title })
-          }}
-          onDeleteVolume={removeVolume}
-          onMoveVolume={handleMoveVolume}
-          onRenameChapter={(id, title) => {
-            const chapter = chapters.find((item) => item.id === id)
-            if (chapter) saveChapter({ ...chapter, title })
-          }}
-          onDeleteChapter={removeChapter}
-          onReorderChapter={handleReorderChapter}
-          onBatchCopyChapters={handleBatchCopyChapters}
-          onBatchMoveChapters={handleBatchMoveChapters}
-          onBatchMergeChapters={handleBatchMergeChapters}
-        />
-
-        <EditorPane
-          editor={editor}
-          chapter={activeChapter}
-          diffVersion={diffVersion}
-          onExitDiff={handleExitDiff}
-          onRunAiAction={handleRunAiAction}
-          onTitleChange={(title) => handleChapterMetaUpdate({ title })}
-          onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
-          onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}
-          onTargetWordCountChange={(target) => handleChapterMetaUpdate({ targetWordCount: target })}
-          onCreateVersion={() => {
-            if (!activeChapter) return
-            const requestId = createId()
-            const startedAt = nowMs()
-            createChapterVersion(activeChapter)
-              .then((nextVersions) => {
-                setVersions(nextVersions)
-                pushLog(
-                  createLogEntry({
-                    requestId,
-                    scope: 'diff',
-                    status: 'success',
-                    message: '创建版本快照成功',
-                    durationMs: nowMs() - startedAt,
-                    payloadSummary: `chapter=${activeChapter.id}`
-                  })
+      {currentPage === 'editor' && (
+        <>
+          <main className="workspace">
+            <Explorer
+              volumes={volumes}
+              chapters={chapters}
+              activeVolumeId={resolvedVolumeId}
+              activeChapterId={resolvedChapterId}
+              onSelectVolume={setActiveVolumeId}
+              onSelectChapter={setActiveChapterId}
+              onCreateChapter={(volumeId) =>
+                createNewChapter(volumeId, `第${chapters.length + 1}章 新章节`).then((chapter) =>
+                  setActiveChapterId(chapter.id)
                 )
-              })
-              .catch((error: unknown) => {
-                const message = error instanceof Error ? error.message : '创建版本失败'
-                pushLog(
-                  createLogEntry({
-                    requestId,
-                    scope: 'diff',
-                    status: 'error',
-                    message: `创建版本失败：${message}`,
-                    durationMs: nowMs() - startedAt,
-                    payloadSummary: `chapter=${activeChapter.id}`
-                  })
-                )
-              })
-          }}
-          onSelectionChange={handleSelectionChange}
-          onContentChange={handleContentChange}
-          editorWidth={settings?.ui.editorWidth ?? 'full'}
-        />
+              }
+              onCreateVolume={() =>
+                createNewVolume(`新卷 ${volumes.length + 1}`).then((volume) => setActiveVolumeId(volume.id))
+              }
+              onRenameVolume={(id, title) => {
+                const volume = volumes.find((item) => item.id === id)
+                if (volume) upsertVolume({ ...volume, title })
+              }}
+              onDeleteVolume={removeVolume}
+              onMoveVolume={handleMoveVolume}
+              onRenameChapter={(id, title) => {
+                const chapter = chapters.find((item) => item.id === id)
+                if (chapter) saveChapter({ ...chapter, title })
+              }}
+              onDeleteChapter={removeChapter}
+              onReorderChapter={handleReorderChapter}
+              onBatchCopyChapters={handleBatchCopyChapters}
+              onBatchMoveChapters={handleBatchMoveChapters}
+              onBatchMergeChapters={handleBatchMergeChapters}
+            />
 
-      <RightPanel
-          chapter={activeChapter}
-          selectedBlock={selectedBlock}
-          providers={settings?.providers ?? []}
-          agents={settings?.agents ?? []}
-          activeProviderId={resolvedProviderId}
-          activeAgentId={resolvedAgentId}
-          onProviderChange={setActiveProviderId}
-          onAgentChange={setActiveAgentId}
-          onRunAiAction={handleRunAiAction}
-          versions={versions}
-          activeDiffVersionId={diffVersion?.id}
-          onCompareVersion={handleOpenDiff}
-          onRestoreVersion={(versionId) =>
-            resolvedChapterId &&
-            (() => {
-              setDiffVersion(null)
-              const requestId = createId()
-              const startedAt = nowMs()
-              return restoreChapterVersion(resolvedChapterId, versionId)
-                .then((chapter) => {
-                  if (chapter) {
-                    setActiveChapterId(chapter.id)
+            <EditorPane
+              editor={editor}
+              chapter={activeChapter}
+              diffVersion={diffVersion}
+              onExitDiff={handleExitDiff}
+              onRunAiAction={handleRunAiAction}
+              onTitleChange={(title) => handleChapterMetaUpdate({ title })}
+              onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
+              onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}
+              onTargetWordCountChange={(target) => handleChapterMetaUpdate({ targetWordCount: target })}
+              onCreateVersion={() => {
+                if (!activeChapter) return
+                const requestId = createId()
+                const startedAt = nowMs()
+                createChapterVersion(activeChapter)
+                  .then((nextVersions) => {
+                    setVersions(nextVersions)
                     pushLog(
                       createLogEntry({
                         requestId,
                         scope: 'diff',
                         status: 'success',
-                        message: '版本回滚成功',
+                        message: '创建版本快照成功',
                         durationMs: nowMs() - startedAt,
-                        payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+                        payloadSummary: `chapter=${activeChapter.id}`
                       })
                     )
-                  }
-                  return chapter
-                })
-                .catch((error: unknown) => {
-                  const message = error instanceof Error ? error.message : '版本回滚失败'
-                  pushLog(
-                    createLogEntry({
-                      requestId,
-                      scope: 'diff',
-                      status: 'error',
-                      message: `版本回滚失败：${message}`,
-                      durationMs: nowMs() - startedAt,
-                      payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
-                    })
-                  )
-                  throw error
-                })
-            })()
-          }
-          onRefreshVersions={() =>
-            resolvedChapterId &&
-            (() => {
-              const requestId = createId()
-              const startedAt = nowMs()
-              return loadVersions(resolvedChapterId)
-                .then((nextVersions) => {
-                  setVersions(nextVersions)
-                  pushLog(
-                    createLogEntry({
-                      requestId,
-                      scope: 'diff',
-                      status: 'success',
-                      message: '刷新版本成功',
-                      durationMs: nowMs() - startedAt,
-                      payloadSummary: `chapter=${resolvedChapterId} count=${nextVersions.length}`
-                    })
-                  )
-                  return nextVersions
-                })
-                .catch((error: unknown) => {
-                  const message = error instanceof Error ? error.message : '刷新版本失败'
-                  pushLog(
-                    createLogEntry({
-                      requestId,
-                      scope: 'diff',
-                      status: 'error',
-                      message: `刷新版本失败：${message}`,
-                      durationMs: nowMs() - startedAt,
-                      payloadSummary: `chapter=${resolvedChapterId}`
-                    })
-                  )
-                  throw error
-                })
-            })()
-          }
-          comments={comments}
-          onAddComment={(author, body) =>
-            resolvedChapterId && addChapterComment(resolvedChapterId, author, body).then(setComments)
-          }
-          aiLogs={aiLogs}
-          aiRuns={aiRuns}
-          onReplayRun={handleReplayRun}
-          authorName={settings?.profile.authorName ?? '匿名作者'}
-        />
-      </main>
+                  })
+                  .catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : '创建版本失败'
+                    pushLog(
+                      createLogEntry({
+                        requestId,
+                        scope: 'diff',
+                        status: 'error',
+                        message: `创建版本失败：${message}`,
+                        durationMs: nowMs() - startedAt,
+                        payloadSummary: `chapter=${activeChapter.id}`
+                      })
+                    )
+                  })
+              }}
+              onSelectionChange={handleSelectionChange}
+              onContentChange={handleContentChange}
+              editorWidth={settings?.ui.editorWidth ?? 'full'}
+            />
 
-      <footer className="status-bar">
-        <span>光标块: {selectedBlock?.type ?? '-'}</span>
-        <span>章节: {activeChapter?.title ?? '-'}</span>
-        <span>AI: {resolvedAgentId || '-'}</span>
-        <span>{offline ? '离线缓存' : '在线同步'}</span>
-      </footer>
+            <RightPanel
+              chapter={activeChapter}
+              selectedBlock={selectedBlock}
+              providers={settings?.providers ?? []}
+              agents={settings?.agents ?? []}
+              activeProviderId={resolvedProviderId}
+              activeAgentId={resolvedAgentId}
+              onProviderChange={setActiveProviderId}
+              onAgentChange={setActiveAgentId}
+              onRunAiAction={handleRunAiAction}
+              versions={versions}
+              activeDiffVersionId={diffVersion?.id}
+              onCompareVersion={handleOpenDiff}
+              onRestoreVersion={(versionId) =>
+                resolvedChapterId &&
+                (() => {
+                  setDiffVersion(null)
+                  const requestId = createId()
+                  const startedAt = nowMs()
+                  return restoreChapterVersion(resolvedChapterId, versionId)
+                    .then((chapter) => {
+                      if (chapter) {
+                        setActiveChapterId(chapter.id)
+                        pushLog(
+                          createLogEntry({
+                            requestId,
+                            scope: 'diff',
+                            status: 'success',
+                            message: '版本回滚成功',
+                            durationMs: nowMs() - startedAt,
+                            payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+                          })
+                        )
+                      }
+                      return chapter
+                    })
+                    .catch((error: unknown) => {
+                      const message = error instanceof Error ? error.message : '版本回滚失败'
+                      pushLog(
+                        createLogEntry({
+                          requestId,
+                          scope: 'diff',
+                          status: 'error',
+                          message: `版本回滚失败：${message}`,
+                          durationMs: nowMs() - startedAt,
+                          payloadSummary: `chapter=${resolvedChapterId} version=${versionId}`
+                        })
+                      )
+                      throw error
+                    })
+                })()
+              }
+              onRefreshVersions={() =>
+                resolvedChapterId &&
+                (() => {
+                  const requestId = createId()
+                  const startedAt = nowMs()
+                  return loadVersions(resolvedChapterId)
+                    .then((nextVersions) => {
+                      setVersions(nextVersions)
+                      pushLog(
+                        createLogEntry({
+                          requestId,
+                          scope: 'diff',
+                          status: 'success',
+                          message: '刷新版本成功',
+                          durationMs: nowMs() - startedAt,
+                          payloadSummary: `chapter=${resolvedChapterId} count=${nextVersions.length}`
+                        })
+                      )
+                      return nextVersions
+                    })
+                    .catch((error: unknown) => {
+                      const message = error instanceof Error ? error.message : '刷新版本失败'
+                      pushLog(
+                        createLogEntry({
+                          requestId,
+                          scope: 'diff',
+                          status: 'error',
+                          message: `刷新版本失败：${message}`,
+                          durationMs: nowMs() - startedAt,
+                          payloadSummary: `chapter=${resolvedChapterId}`
+                        })
+                      )
+                      throw error
+                    })
+                })()
+              }
+              comments={comments}
+              onAddComment={(author, body) =>
+                resolvedChapterId && addChapterComment(resolvedChapterId, author, body).then(setComments)
+              }
+              aiLogs={aiLogs}
+              aiRuns={aiRuns}
+              onReplayRun={handleReplayRun}
+              authorName={settings?.profile.authorName ?? '匿名作者'}
+            />
+          </main>
+
+          <footer className="status-bar">
+            <span>光标块: {selectedBlock?.type ?? '-'}</span>
+            <span>章节: {activeChapter?.title ?? '-'}</span>
+            <span>AI: {resolvedAgentId || '-'}</span>
+            <span>{offline ? '离线缓存' : '在线同步'}</span>
+          </footer>
+        </>
+      )}
 
       {currentPage === 'settings' && (
         <SettingsPage
           settings={settings}
           onBack={() => setCurrentPage('editor')}
           onSave={(next: Settings) => updateSettings(next)}
+        />
+      )}
+
+      {currentPage === 'knowledge' && (
+        <KnowledgeBasePage
+          notes={notes}
+          onSaveNote={handleSaveNote}
+          onDeleteNote={handleDeleteNote}
+          onInsertNote={handleInsertNote}
+          onRefreshReferences={handleRefreshReferences}
+          canRefreshReferences={Boolean(activeChapter)}
+          onBack={() => setCurrentPage('editor')}
+          activeChapterTitle={activeChapter?.title}
         />
       )}
 
@@ -970,13 +1025,6 @@ export const App = () => {
         onReload={handleConflictReload}
       />
 
-      <KnowledgeBaseDrawer
-        open={knowledgeBaseOpen}
-        onClose={() => setKnowledgeBaseOpen(false)}
-        notes={notes}
-        onSaveNote={handleSaveNote}
-        onDeleteNote={handleDeleteNote}
-      />
     </div>
   )
 }
