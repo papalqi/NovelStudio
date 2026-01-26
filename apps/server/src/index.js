@@ -25,6 +25,7 @@ import {
 
 const app = express()
 const port = process.env.PORT || 8787
+const host = process.env.HOST || '0.0.0.0'
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -36,25 +37,96 @@ const DEFAULT_SETTINGS = {
   export: { defaultFormat: 'markdown' },
   ai: {
     temperature: 0.7,
-    maxTokens: 800,
-    defaultProviderId: 'provider-default',
-    defaultAgentId: 'agent-default'
+    maxTokens: 2000,
+    defaultProviderId: 'provider-papalqi',
+    defaultAgentId: 'agent-writer'
   },
   providers: [
     {
-      id: 'provider-default',
-      name: 'OpenAI Compatible',
-      baseUrl: 'https://api.example.com/v1',
+      id: 'provider-papalqi',
+      name: '用户 API',
+      baseUrl: 'https://api.papalqi.top',
+      token: 'sk-UQtfUNw1yniN9a9VlR8ENYK8xCg8LDr6YdS9TwNYqNTfpnEY',
+      model: 'gpt-oss-120b'
+    },
+    {
+      id: 'provider-openai',
+      name: 'OpenAI 兼容',
+      baseUrl: 'https://api.openai.com/v1',
       token: '',
-      model: 'gpt-4.1-mini'
+      model: 'gpt-4o'
+    },
+    {
+      id: 'provider-deepseek',
+      name: 'DeepSeek',
+      baseUrl: 'https://api.deepseek.com/v1',
+      token: '',
+      model: 'deepseek-chat'
+    },
+    {
+      id: 'provider-local',
+      name: '本地模型',
+      baseUrl: 'http://localhost:11434/v1',
+      token: 'ollama',
+      model: 'qwen2.5:7b'
     }
   ],
   agents: [
     {
-      id: 'agent-default',
-      name: '章节编辑 Agent',
-      providerId: 'provider-default',
-      systemPrompt: '你是网络小说编辑助手，擅长结构规划与续写。'
+      id: 'agent-writer',
+      name: '写作助手',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是专业的网络小说写作助手，擅长情节构思、文笔润色、角色塑造。请用中文回复，保持网文风格。',
+      builtIn: true
+    },
+    {
+      id: 'agent-continue',
+      name: '续写大师',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是续写专家，能够根据上下文风格续写内容，保持人物性格一致，情节连贯。请直接输出续写内容，不要解释。',
+      builtIn: true
+    },
+    {
+      id: 'agent-polish',
+      name: '润色专家',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是文笔润色专家，优化文字表达，增强画面感，但保持原意和风格不变。请直接输出润色后的内容。',
+      builtIn: true
+    },
+    {
+      id: 'agent-outline',
+      name: '大纲规划师',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你擅长故事结构设计，熟悉三幕式、英雄之旅等叙事框架。帮助作者规划章节大纲和情节走向。',
+      builtIn: true
+    },
+    {
+      id: 'agent-character',
+      name: '角色设计师',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是角色设计专家，擅长创建立体的人物形象，包含外貌、性格、背景、动机。输出结构化的角色卡。',
+      builtIn: true
+    },
+    {
+      id: 'agent-worldbuilder',
+      name: '世界构建师',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是世界观架构师，擅长构建完整的世界观体系，包括魔法/科技、社会/历史、地理/文化。',
+      builtIn: true
+    },
+    {
+      id: 'agent-dialogue',
+      name: '对话专家',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你擅长优化对话，让对话更自然、更有个性，符合角色身份和性格特点。请直接输出优化后的对话。',
+      builtIn: true
+    },
+    {
+      id: 'agent-proofreader',
+      name: '校对助手',
+      providerId: 'provider-papalqi',
+      systemPrompt: '你是专业校对，检查错别字、病句、前后矛盾、设定冲突。以列表形式指出问题和建议修改。',
+      builtIn: true
     }
   ],
   profile: { authorName: '匿名作者' }
@@ -262,6 +334,6 @@ app.post('/api/ai/complete', async (req, res) => {
   }
 })
 
-app.listen(port, () => {
-  console.log(`NovelstudioAI server running at http://localhost:${port}`)
+app.listen(port, host, () => {
+  console.log(`NovelstudioAI server running at http://${host}:${port}`)
 })

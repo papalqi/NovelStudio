@@ -1,4 +1,5 @@
 import './TopBar.css'
+import { Settings, Eye, BookOpen, Moon, Sun, RefreshCw } from 'lucide-react'
 
 type TopBarProps = {
   authorName: string
@@ -7,6 +8,9 @@ type TopBarProps = {
   onOpenPreview: () => void
   onManualSync: () => void
   autosaveEnabled: boolean
+  onOpenKnowledgeBase: () => void
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
 }
 
 export const TopBar = ({
@@ -15,7 +19,10 @@ export const TopBar = ({
   onOpenSettings,
   onOpenPreview,
   onManualSync,
-  autosaveEnabled
+  autosaveEnabled,
+  onOpenKnowledgeBase,
+  theme,
+  onToggleTheme
 }: TopBarProps) => {
   return (
     <header className="top-bar">
@@ -31,17 +38,31 @@ export const TopBar = ({
           {offline ? '离线模式' : '同步中'}
         </span>
         <span className="author-pill">作者：{authorName}</span>
-        {!autosaveEnabled && (
-          <button className="ghost-button" onClick={onManualSync}>
-            手动同步
+
+        <div className="topbar-actions">
+          <button className="topbar-button" onClick={onOpenKnowledgeBase} title="资料库">
+            <BookOpen size={18} />
+            <span className="topbar-button-label">资料库</span>
           </button>
-        )}
-        <button className="ghost-button" onClick={onOpenPreview}>
-          发布预览
-        </button>
-        <button className="primary-button" onClick={onOpenSettings}>
-          设置面板
-        </button>
+
+          <button className="topbar-button" onClick={onOpenPreview} title="预览">
+            <Eye size={18} />
+          </button>
+
+          <button className="topbar-button" onClick={onToggleTheme} title={theme === 'light' ? '深色模式' : '浅色模式'}>
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+
+          <button className="topbar-button" onClick={onOpenSettings} title="设置">
+            <Settings size={18} />
+          </button>
+
+          {!autosaveEnabled && (
+            <button className="topbar-button sync" onClick={onManualSync} title="手动同步">
+              <RefreshCw size={18} />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   )

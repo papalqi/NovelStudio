@@ -52,3 +52,38 @@
   background: #2a2420;
   color: #fbeedc;
 }
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.topbar-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.topbar-button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.topbar-button-label {
+  font-size: 0.875rem;
+}
+
+/* 响应式：小屏隐藏文字标签 */
+@media (max-width: 768px) {
+  .topbar-button-label {
+    display: none;
+  }
+}

@@ -1,0 +1,217 @@
+.knowledge-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.knowledge-drawer {
+  width: 50%;
+  max-width: 600px;
+  min-width: 320px;
+  height: 100%;
+  background: var(--color-glass-bg);
+  backdrop-filter: var(--blur-glass);
+  border-left: 1px solid var(--color-glass-border);
+  display: flex;
+  flex-direction: column;
+  animation: slide-in-right 0.3s ease;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.knowledge-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.knowledge-drawer-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.knowledge-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.knowledge-type-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-lg);
+}
+
+.knowledge-type-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.knowledge-type-tab:hover {
+  background: var(--color-bg-hover);
+}
+
+.knowledge-type-tab.active {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.knowledge-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.knowledge-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.knowledge-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+}
+
+.knowledge-add {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.knowledge-add input {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  font-size: 0.875rem;
+}
+
+.knowledge-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.knowledge-empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.knowledge-card {
+  padding: var(--space-3);
+}
+
+.knowledge-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.knowledge-card-title {
+  font-weight: 500;
+}
+
+.knowledge-card-actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.knowledge-card:hover .knowledge-card-actions {
+  opacity: 1;
+}
+
+.knowledge-card-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+}
+
+.knowledge-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.knowledge-edit-content {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.knowledge-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .knowledge-drawer {
+    width: 70%;
+  }
+}
+
+@media (max-width: 768px) {
+  .knowledge-drawer {
+    width: 100%;
+    max-width: none;
+  }
+
+  .knowledge-type-tab span {
+    display: none;
+  }
+}
+
+/* 深色模式 */
+html[data-theme='dark'] .knowledge-drawer-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='dark'] .knowledge-search input,
+html[data-theme='dark'] .knowledge-add input,
+html[data-theme='dark'] .knowledge-edit-content {
+  color: var(--color-text-primary);
+}

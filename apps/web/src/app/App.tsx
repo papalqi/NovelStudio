@@ -6,11 +6,12 @@ import { EditorPane } from './components/EditorPane'
 import { RightPanel } from './components/RightPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { PreviewModal } from './components/PreviewModal'
+import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
 import { useAppData } from './hooks/useAppData'
 import { debounce } from '../utils/debounce'
 import { estimateWordCount, getPlainTextFromBlock } from '../utils/text'
 import { runAiAction, type AiAction } from '../ai/aiService'
-import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block } from '../types'
+import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note } from '../types'
 import './App.css'
 
 const formatDate = () => new Date().toISOString().slice(0, 10)
@@ -21,7 +22,7 @@ export const App = () => {
     settings,
     volumes,
     chapters,
-    notes: _notes, // Reserved for Phase 3 Notes Drawer
+    notes,
     loading,
     offline,
     updateSettings,
@@ -35,18 +36,12 @@ export const App = () => {
     loadVersions,
     createChapterVersion,
     restoreChapterVersion,
-    refreshNotes: _refreshNotes, // Reserved for Phase 3 Notes Drawer
-    upsertNoteItem: _upsertNoteItem, // Reserved for Phase 3 Notes Drawer
-    removeNoteItem: _removeNoteItem, // Reserved for Phase 3 Notes Drawer
+    refreshNotes,
+    upsertNoteItem,
+    removeNoteItem,
     loadComments,
     addChapterComment
   } = useAppData()
-
-  // Suppress unused variable warnings for Phase 3 Notes Drawer
-  void _notes
-  void _refreshNotes
-  void _upsertNoteItem
-  void _removeNoteItem
 
   const [activeVolumeId, setActiveVolumeId] = useState('')
   const [activeChapterId, setActiveChapterId] = useState('')
@@ -58,6 +53,7 @@ export const App = () => {
   const [aiLogs, setAiLogs] = useState<string[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
 
   const switchingRef = useRef(false)
 
@@ -112,10 +108,24 @@ export const App = () => {
     loadComments(resolvedChapterId).then(setComments)
   }, [resolvedChapterId, loadVersions, loadComments])
 
-  // Keep notes data loaded for Phase 3 Notes Drawer
+  // Load notes data for Knowledge Base Drawer
   useEffect(() => {
-    _refreshNotes()
-  }, [_refreshNotes])
+    refreshNotes()
+  }, [refreshNotes])
+
+  const handleToggleTheme = () => {
+    if (!settings) return
+    const newTheme = settings.ui.theme === 'light' ? 'dark' : 'light'
+    updateSettings({ ...settings, ui: { ...settings.ui, theme: newTheme } })
+  }
+
+  const handleSaveNote = (note: Partial<Note>) => {
+    upsertNoteItem(note)
+  }
+
+  const handleDeleteNote = (noteId: string) => {
+    removeNoteItem(noteId)
+  }
 
   const debouncedSave = useMemo(() => {
     return debounce((content: Block[]) => {
@@ -250,6 +260,9 @@ export const App = () => {
         onOpenPreview={() => setPreviewOpen(true)}
         onManualSync={handleManualSync}
         autosaveEnabled={settings?.autosave.enabled ?? true}
+        onOpenKnowledgeBase={() => setKnowledgeBaseOpen(true)}
+        theme={settings?.ui.theme ?? 'light'}
+        onToggleTheme={handleToggleTheme}
       />
 
       <main className="workspace">
@@ -339,6 +352,14 @@ export const App = () => {
       />
 
       <PreviewModal open={previewOpen} html={previewHtml} markdown={previewMarkdown} onClose={() => setPreviewOpen(false)} />
+
+      <KnowledgeBaseDrawer
+        open={knowledgeBaseOpen}
+        onClose={() => setKnowledgeBaseOpen(false)}
+        notes={notes}
+        onSaveNote={handleSaveNote}
+        onDeleteNote={handleDeleteNote}
+      />
     </div>
   )
 }
