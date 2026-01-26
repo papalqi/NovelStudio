@@ -8,5 +8,5 @@ test('basic navigation and chapter creation', async ({ page }) => {
 
   const addChapterButton = page.getByRole('button', { name: '+ 章' }).first()
   await addChapterButton.click()
-  await expect(page.getByText('新章节')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '第1章 新章节' })).toBeVisible()
 })
