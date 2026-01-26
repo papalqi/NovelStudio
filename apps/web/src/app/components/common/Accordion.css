@@ -1,0 +1,64 @@
+.accordion {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+html[data-theme='dark'] .accordion {
+  background: rgba(26, 23, 21, 0.8);
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.accordion-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme='dark'] .accordion-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.accordion-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+}
+
+.accordion-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.accordion-open .accordion-icon {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.accordion-body {
+  padding: 0 16px 16px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+

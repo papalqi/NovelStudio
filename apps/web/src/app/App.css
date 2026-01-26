@@ -1,98 +1,98 @@
-:root {
-  --bg: #f3efe7;
-  --bg-accent: #f9f6f0;
-  --ink: #1f1c18;
-  --muted: #6f6a63;
-  --panel: #ffffff;
-  --panel-border: #e6e0d6;
-  --accent: #d86b1f;
-  --accent-dark: #a54f18;
-  --shadow: 0 20px 40px rgba(40, 32, 20, 0.08);
-  --radius: 14px;
-}
+/**
+ * App 布局样式
+ * 使用 variables.css 中定义的 CSS 变量
+ */
 
-html[data-theme='dark'] {
-  --bg: #141210;
-  --bg-accent: #1f1c18;
-  --ink: #f6efe6;
-  --muted: #b8a99a;
-  --panel: #1a1715;
-  --panel-border: #2d2723;
-  --accent: #ff8b3d;
-  --accent-dark: #d66a28;
-  --shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
-* {
-  box-sizing: border-box;
-}
-
+/* ============================================
+ * App Shell 布局
+ * ============================================ */
 .app-shell {
   min-height: 100vh;
   display: grid;
   grid-template-rows: 64px 1fr 32px;
-  background: radial-gradient(circle at top, #f8f4ee 0%, var(--bg) 45%, #ede6da 100%);
-  color: var(--ink);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
+/* ============================================
+ * 工作区布局
+ * ============================================ */
 .workspace {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 320px;
-  gap: 16px;
-  padding: 16px 20px;
+  grid-template-columns: var(--sidebar-width-default) minmax(0, 1fr) var(--sidebar-width-expanded);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
+/* ============================================
+ * 按钮样式
+ * ============================================ */
 .primary-button,
 .ghost-button,
 .mini-button {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
-  padding: 8px 14px;
+  padding: var(--space-2) var(--space-3);
   font-size: 13px;
   cursor: pointer;
   font-weight: 600;
+  transition: all var(--transition-fast);
 }
 
 .primary-button {
-  background: var(--accent);
-  color: white;
-  box-shadow: 0 8px 18px rgba(216, 107, 31, 0.3);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
 }
 
 .primary-button:hover {
-  background: var(--accent-dark);
+  background: var(--color-accent-hover);
 }
 
 .ghost-button {
   background: transparent;
-  border-color: #e1d7c8;
-  color: var(--ink);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
 }
 
 .ghost-button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .mini-button {
-  background: #f5ede2;
-  color: #7a4a21;
-  border-color: #f1d9c2;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-secondary);
 }
 
+.mini-button:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+ * 状态栏
+ * ============================================ */
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  background: #1f1c18;
-  color: #fbeedc;
+  padding: 0 var(--space-4);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
   font-size: 12px;
+  border-top: 1px solid var(--color-border-secondary);
 }
 
-@media (max-width: 1200px) {
+/* ============================================
+ * 响应式断点
+ * ============================================ */
+
+/* 大屏幕 (<=1280px): 隐藏右侧面板 */
+@media (max-width: 1280px) {
   .workspace {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width-default) minmax(0, 1fr);
   }
 
   .right-panel {
@@ -100,9 +100,24 @@ html[data-theme='dark'] {
   }
 }
 
-@media (max-width: 900px) {
+/* 中等屏幕 (<=1024px): 收窄侧边栏 */
+@media (max-width: 1024px) {
+  .workspace {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+/* 小屏幕 (<=768px): 单列布局 */
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-rows: 56px 1fr 28px;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
+    padding: var(--space-3);
   }
 
   .sidebar {
@@ -111,5 +126,20 @@ html[data-theme='dark'] {
 
   .editor-area {
     order: 1;
+  }
+}
+
+/* 超小屏幕 (<=640px): 移动端优化 */
+@media (max-width: 640px) {
+  .workspace {
+    padding: var(--space-2);
+    gap: var(--space-2);
+  }
+
+  .primary-button,
+  .ghost-button,
+  .mini-button {
+    padding: var(--space-2) var(--space-3);
+    font-size: 14px;
   }
 }

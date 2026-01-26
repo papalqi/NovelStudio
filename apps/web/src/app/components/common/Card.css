@@ -1,0 +1,46 @@
+.card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+html[data-theme='dark'] .card {
+  background: rgba(26, 23, 21, 0.8);
+}
+
+.card-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--panel-border);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+html[data-theme='dark'] .card-header {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.card-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+html[data-theme='dark'] .card-footer {
+  background: rgba(255, 255, 255, 0.03);
+}
+
