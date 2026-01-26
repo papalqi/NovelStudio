@@ -199,6 +199,15 @@ export const useAppData = () => {
     [apiBaseUrl, state.chapters]
   )
 
+  const createChapterWithContent = useCallback(
+    async (draft: Partial<Chapter>) => {
+      const chapter = await createChapter(draft, apiBaseUrl)
+      setState((prev) => ({ ...prev, chapters: [...prev.chapters, chapter] }))
+      return chapter
+    },
+    [apiBaseUrl]
+  )
+
   const saveChapter = useCallback(
     async (chapter: Chapter) => {
       const saved = await updateChapter(chapter.id, chapter, apiBaseUrl)
@@ -314,6 +323,7 @@ export const useAppData = () => {
     createNewVolume,
     removeVolume,
     createNewChapter,
+    createChapterWithContent,
     saveChapter,
     saveChapterContent,
     removeChapter,

@@ -76,6 +76,63 @@
 }
 
 /* ============================================
+ * 批量操作条
+ * ============================================ */
+.batch-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-separator);
+  background: var(--color-bg-tertiary);
+}
+
+.batch-actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.batch-actions-tools {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.batch-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.batch-action-btn {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  font-size: 12px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.batch-action-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.batch-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.batch-error {
+  font-size: 12px;
+  color: var(--color-error);
+}
+
+/* ============================================
  * 树形结构容器
  * ============================================ */
 .tree {
@@ -157,7 +214,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   display: grid;
-  grid-template-columns: 12px 1fr auto;
+  grid-template-columns: 20px 12px 1fr auto;
   gap: var(--space-2);
   align-items: center;
   cursor: pointer;
@@ -211,6 +268,12 @@
   flex-shrink: 0;
 }
 
+.chapter-select {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+
 .status-draft {
   background: var(--color-warning);
 }
@@ -240,6 +303,26 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* ============================================
+ * 批量操作弹窗
+ * ============================================ */
+.batch-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.batch-modal-note {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.batch-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .rename-modal-actions {
