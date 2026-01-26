@@ -26,7 +26,19 @@ const bootstrapResponse = {
     ui: { theme: 'light', fontFamily: 'IBM Plex Sans', editorWidth: 'full' },
     autosave: { enabled: true, intervalMs: 1000 },
     export: { defaultFormat: 'markdown' },
-    ai: { temperature: 0.7, maxTokens: 800, defaultProviderId: 'p1', defaultAgentId: 'a1' },
+    ai: {
+      temperature: 0.7,
+      maxTokens: 800,
+      defaultProviderId: 'p1',
+      defaultAgentId: 'a1',
+      request: {
+        timeoutMs: 20000,
+        maxRetries: 2,
+        retryDelayMs: 800,
+        maxConcurrency: 2,
+        rateLimitPerMinute: 60
+      }
+    },
     providers: [{ id: 'p1', name: 'Mock', baseUrl: 'http://x', token: '', model: 'm' }],
     agents: [{ id: 'a1', name: 'Agent', providerId: 'p1', systemPrompt: '' }],
     profile: { authorName: '测试' }

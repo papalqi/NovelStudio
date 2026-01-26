@@ -262,7 +262,7 @@ export const App = () => {
 
     const requestId = createId()
     const requestStartedAt = nowMs()
-    const payloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
+    const basePayloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
 
     try {
       const response = await runAiAction({
@@ -291,6 +291,7 @@ export const App = () => {
           )
         }
       }
+      const successPayloadSummary = `${basePayloadSummary} retries=${response.meta.retries}`
       pushLog(
         createLogEntry({
           requestId,
@@ -298,7 +299,7 @@ export const App = () => {
           status: 'success',
           message: `${response.label} 完成`,
             durationMs: nowMs() - requestStartedAt,
-          payloadSummary
+          payloadSummary: successPayloadSummary
         })
       )
       pushLog(
@@ -308,11 +309,14 @@ export const App = () => {
           status: 'success',
           message: `Agent 执行完成`,
             durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action}`
+          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${response.meta.retries}`
         })
       )
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'AI 调用失败'
+      const retryCount =
+        typeof (error as { retries?: number }).retries === 'number' ? (error as { retries: number }).retries : 0
+      const failurePayloadSummary = `${basePayloadSummary} retries=${retryCount}`
       pushLog(
         createLogEntry({
           requestId,
@@ -320,7 +324,7 @@ export const App = () => {
           status: 'error',
           message: `AI 失败：${message}`,
             durationMs: nowMs() - requestStartedAt,
-          payloadSummary
+          payloadSummary: failurePayloadSummary
         })
       )
       pushLog(
@@ -330,7 +334,7 @@ export const App = () => {
           status: 'error',
           message: `Agent 执行失败：${message}`,
             durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action}`
+          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${retryCount}`
         })
       )
     }

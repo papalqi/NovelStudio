@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download } from 'lucide-react'
-import type { Settings, Provider, Agent } from '../../types'
+import type { Settings, Provider, Agent, AiRequestSettings } from '../../types'
 import { createId } from '../../utils/id'
+import { normalizeAiRequestSettings } from '../../utils/aiRequest'
 import { Card, Input, Select, Toggle, Button } from './common'
 import './SettingsPage.css'
 
@@ -29,7 +30,15 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('profile')
 
   useEffect(() => {
-    setDraft(settings)
+    if (!settings) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync incoming settings into editable draft
+    setDraft({
+      ...settings,
+      ai: {
+        ...settings.ai,
+        request: normalizeAiRequestSettings(settings.ai.request)
+      }
+    })
   }, [settings])
 
   if (!draft) return null
@@ -45,6 +54,19 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
     setDraft({
       ...draft,
       agents: draft.agents.map((item) => (item.id === id ? { ...item, ...patch } : item))
+    })
+  }
+
+  const updateAiRequest = (patch: Partial<AiRequestSettings>) => {
+    setDraft({
+      ...draft,
+      ai: {
+        ...draft.ai,
+        request: {
+          ...draft.ai.request,
+          ...patch
+        }
+      }
     })
   }
 
@@ -349,6 +371,75 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 }
                 options={draft.agents.map((a) => ({ value: a.id, label: a.name }))}
                 testId="settings-ai-default-agent"
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+      <Card header="请求策略">
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="settings-row-label">请求超时（毫秒）</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.request.timeoutMs}
+                onChange={(e) => updateAiRequest({ timeoutMs: Number(e.target.value) })}
+                min="0"
+                step="500"
+                data-testid="settings-ai-timeout"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">最大重试次数</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.request.maxRetries}
+                onChange={(e) => updateAiRequest({ maxRetries: Number(e.target.value) })}
+                min="0"
+                step="1"
+                data-testid="settings-ai-max-retries"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">重试间隔（毫秒）</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.request.retryDelayMs}
+                onChange={(e) => updateAiRequest({ retryDelayMs: Number(e.target.value) })}
+                min="0"
+                step="100"
+                data-testid="settings-ai-retry-delay"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">最大并发数</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.request.maxConcurrency}
+                onChange={(e) => updateAiRequest({ maxConcurrency: Number(e.target.value) })}
+                min="1"
+                step="1"
+                data-testid="settings-ai-max-concurrency"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">每分钟请求上限</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.request.rateLimitPerMinute}
+                onChange={(e) => updateAiRequest({ rateLimitPerMinute: Number(e.target.value) })}
+                min="0"
+                step="1"
+                data-testid="settings-ai-rate-limit"
               />
             </div>
           </div>

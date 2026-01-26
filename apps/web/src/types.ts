@@ -41,6 +41,14 @@ export type Agent = {
   systemPrompt: string
 }
 
+export type AiRequestSettings = {
+  timeoutMs: number
+  maxRetries: number
+  retryDelayMs: number
+  maxConcurrency: number
+  rateLimitPerMinute: number
+}
+
 export type Settings = {
   sync: { apiBaseUrl: string }
   ui: { theme: 'light' | 'dark'; fontFamily: string; editorWidth: 'full' | 'center' }
@@ -51,6 +59,7 @@ export type Settings = {
     maxTokens: number
     defaultProviderId: string
     defaultAgentId: string
+    request: AiRequestSettings
   }
   providers: Provider[]
   agents: Agent[]

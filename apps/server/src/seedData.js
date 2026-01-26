@@ -21,7 +21,14 @@ export const seedSettings = {
     temperature: 0.7,
     maxTokens: 800,
     defaultProviderId: 'provider-default',
-    defaultAgentId: 'agent-default'
+    defaultAgentId: 'agent-default',
+    request: {
+      timeoutMs: 20000,
+      maxRetries: 2,
+      retryDelayMs: 800,
+      maxConcurrency: 2,
+      rateLimitPerMinute: 60
+    }
   },
   providers: [
     {

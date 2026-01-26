@@ -22,6 +22,7 @@ import {
 } from '../../api'
 import { resolveApiBaseUrl } from '../../api/client'
 import { createId } from '../../utils/id'
+import { normalizeAiRequestSettings } from '../../utils/aiRequest'
 
 const CACHE_KEY = 'novelstudio.cache.v1'
 
@@ -38,6 +39,14 @@ const loadCache = (): AppBootstrap | null => {
 const saveCache = (payload: AppBootstrap) => {
   localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
 }
+
+const normalizeSettings = (settings: Settings): Settings => ({
+  ...settings,
+  ai: {
+    ...settings.ai,
+    request: normalizeAiRequestSettings(settings.ai?.request)
+  }
+})
 
 export type AppDataState = {
   settings: Settings | null
@@ -63,8 +72,9 @@ export const useAppData = () => {
   const apiBaseUrl = resolveApiBaseUrl(state.settings?.sync.apiBaseUrl)
 
   const applyBootstrap = useCallback((payload: AppBootstrap, offline = false) => {
+    const normalizedSettings = normalizeSettings(payload.settings)
     setState({
-      settings: payload.settings,
+      settings: normalizedSettings,
       volumes: payload.volumes,
       chapters: payload.chapters,
       notes: payload.notes,
@@ -72,7 +82,12 @@ export const useAppData = () => {
       error: null,
       offline
     })
-    saveCache(payload)
+    saveCache({
+      settings: normalizedSettings,
+      volumes: payload.volumes,
+      chapters: payload.chapters,
+      notes: payload.notes
+    })
   }, [])
 
   const refresh = useCallback(async () => {
@@ -108,15 +123,17 @@ export const useAppData = () => {
 
   const updateSettings = useCallback(
     async (next: Settings) => {
-      const saved = await saveSettings(next, next.sync.apiBaseUrl)
-      setState((prev) => ({ ...prev, settings: saved }))
+      const normalized = normalizeSettings(next)
+      const saved = await saveSettings(normalized, normalized.sync.apiBaseUrl)
+      const normalizedSaved = normalizeSettings(saved)
+      setState((prev) => ({ ...prev, settings: normalizedSaved }))
       saveCache({
-        settings: saved,
+        settings: normalizedSaved,
         volumes: state.volumes,
         chapters: state.chapters,
         notes: state.notes
       })
-      return saved
+      return normalizedSaved
     },
     [state.chapters, state.notes, state.volumes]
   )

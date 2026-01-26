@@ -71,14 +71,16 @@ export const runAiAction = async (params: {
       temperature: params.settings.ai.temperature,
       maxTokens: params.settings.ai.maxTokens
     },
-    params.settings.sync.apiBaseUrl
+    params.settings.sync.apiBaseUrl,
+    params.settings.ai.request
   )
 
   return {
     content: response.content,
     provider,
     agent,
-    label: actionLabel[params.action]
+    label: actionLabel[params.action],
+    meta: response.meta
   }
 }
 
