@@ -6,11 +6,12 @@ import { EditorPane } from './components/EditorPane'
 import { RightPanel } from './components/RightPanel'
 import { SettingsPage } from './components/SettingsPage'
 import { PreviewModal } from './components/PreviewModal'
+import { ConflictModal } from './components/ConflictModal'
 import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
 import { useAppData } from './hooks/useAppData'
 import { debounce } from '../utils/debounce'
 import { createId } from '../utils/id'
-import { estimateWordCount, getPlainTextFromBlock } from '../utils/text'
+import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
 import { nowMs } from '../utils/time'
 import { createLogEntry, type LogEntry } from '../utils/logging'
 import { runAiAction, type AiAction } from '../ai/aiService'
@@ -22,6 +23,14 @@ type AppPage = 'editor' | 'settings'
 
 const formatDate = () => new Date().toISOString().slice(0, 10)
 
+type ConflictState = {
+  chapterId: string
+  chapterTitle: string
+  localContent: Block[]
+  localWordCount: number
+  serverUpdatedAt?: string
+}
+
 export const App = () => {
   const editor = useCreateBlockNote()
   const {
@@ -31,6 +40,7 @@ export const App = () => {
     notes,
     loading,
     offline,
+    refresh,
     updateSettings,
     upsertVolume,
     createNewVolume,
@@ -59,11 +69,13 @@ export const App = () => {
   const [aiLogs, setAiLogs] = useState<LogEntry[]>([])
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([])
   const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
+  const [conflictState, setConflictState] = useState<ConflictState | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
 
   const switchingRef = useRef(false)
+  const conflictRef = useRef(false)
 
   const resolvedVolumeId = useMemo(() => {
     if (volumes.find((volume) => volume.id === activeVolumeId)) return activeVolumeId
@@ -86,6 +98,10 @@ export const App = () => {
     document.body.style.fontFamily = settings.ui.fontFamily
     document.documentElement.dataset.theme = settings.ui.theme
   }, [settings])
+
+  useEffect(() => {
+    conflictRef.current = Boolean(conflictState)
+  }, [conflictState])
 
   const resolvedProviderId = useMemo(() => {
     const providerIds = settings?.providers ?? []
@@ -132,6 +148,22 @@ export const App = () => {
   const pushLog = useCallback((entry: LogEntry) => {
     setAiLogs((prev) => [entry, ...prev].slice(0, 12))
   }, [])
+
+  const openConflictPrompt = useCallback(
+    (content: Block[], wordCount: number) => {
+      if (!activeChapter) return
+      setConflictState((prev) =>
+        prev ?? {
+          chapterId: activeChapter.id,
+          chapterTitle: activeChapter.title,
+          localContent: content,
+          localWordCount: wordCount,
+          serverUpdatedAt: activeChapter.updatedAt
+        }
+      )
+    },
+    [activeChapter]
+  )
 
   const AI_ACTIONS: AiAction[] = [
     'rewrite',
@@ -218,11 +250,12 @@ export const App = () => {
 
   const debouncedSave = useMemo(() => {
     return debounce((content: Block[]) => {
+      if (conflictRef.current) return
       if (!activeChapter || !settings?.autosave.enabled) return
       const requestId = createId()
       const startedAt = nowMs()
       const wordCount = estimateWordCount(content)
-      void saveChapterContent(activeChapter.id, content, wordCount, formatDate())
+      void saveChapterContent(activeChapter.id, content, wordCount, formatDate(), { revision: activeChapter.revision })
         .then(() => {
           pushLog(
             createLogEntry({
@@ -258,13 +291,15 @@ export const App = () => {
                 payloadSummary: `chapter=${activeChapter.id}`
               })
             )
+            openConflictPrompt(content, wordCount)
           }
         })
     }, settings?.autosave.intervalMs ?? 1200)
-  }, [activeChapter, saveChapterContent, settings, pushLog])
+  }, [activeChapter, openConflictPrompt, saveChapterContent, settings, pushLog])
 
   const handleContentChange = () => {
     if (switchingRef.current) return
+    if (conflictRef.current) return
     const content = editor.document as Block[]
     if (!settings?.autosave.enabled) return
     debouncedSave(content)
@@ -304,6 +339,120 @@ export const App = () => {
         payloadSummary: `chapter=${resolvedChapterId} version=${diffVersion.id}`
       })
     )
+  }
+
+  const handleConflictOverwrite = async () => {
+    if (!conflictState) return
+    const requestId = createId()
+    const startedAt = nowMs()
+    try {
+      await saveChapterContent(
+        conflictState.chapterId,
+        conflictState.localContent,
+        conflictState.localWordCount,
+        formatDate(),
+        { skipConflict: true }
+      )
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'success',
+          message: '已覆盖保存',
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId}`
+        })
+      )
+      setConflictState(null)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '覆盖保存失败'
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'error',
+          message: `覆盖保存失败：${message}`,
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId}`
+        })
+      )
+    }
+  }
+
+  const handleConflictSaveCopy = async () => {
+    if (!conflictState) return
+    const conflictChapter = chapters.find((chapter) => chapter.id === conflictState.chapterId)
+    if (!conflictChapter) {
+      setConflictState(null)
+      return
+    }
+    const requestId = createId()
+    const startedAt = nowMs()
+    const snapshot: Chapter = {
+      ...conflictChapter,
+      content: conflictState.localContent,
+      wordCount: conflictState.localWordCount,
+      updatedAt: formatDate()
+    }
+    try {
+      const nextVersions = await createChapterVersion(snapshot)
+      setVersions(nextVersions)
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'success',
+          message: '已另存为版本',
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId} versions=${nextVersions.length}`
+        })
+      )
+      setConflictState(null)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '另存失败'
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'error',
+          message: `另存失败：${message}`,
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId}`
+        })
+      )
+    }
+  }
+
+  const handleConflictReload = async () => {
+    if (!conflictState) return
+    const requestId = createId()
+    const startedAt = nowMs()
+    try {
+      await refresh()
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'success',
+          message: '已重新加载最新版本',
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId}`
+        })
+      )
+      setConflictState(null)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '重新加载失败'
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'conflict',
+          status: 'error',
+          message: `重新加载失败：${message}`,
+          durationMs: nowMs() - startedAt,
+          payloadSummary: `chapter=${conflictState.chapterId}`
+        })
+      )
+    }
   }
 
   const handleChapterMetaUpdate = (patch: Partial<Chapter>) => {
@@ -606,7 +755,31 @@ export const App = () => {
     if (!activeChapter) return
     const content = editor.document as Block[]
     const wordCount = estimateWordCount(content)
-    void saveChapterContent(activeChapter.id, content, wordCount, formatDate())
+    void saveChapterContent(activeChapter.id, content, wordCount, formatDate(), { revision: activeChapter.revision })
+      .then(() => {
+        pushLog(
+          createLogEntry({
+            scope: 'system',
+            status: 'success',
+            message: '手动同步成功',
+            payloadSummary: `chapter=${activeChapter.id} words=${wordCount}`
+          })
+        )
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : '同步失败'
+        pushLog(
+          createLogEntry({
+            scope: 'system',
+            status: 'error',
+            message: `手动同步失败：${message}`,
+            payloadSummary: `chapter=${activeChapter.id}`
+          })
+        )
+        if (/409|conflict|冲突/i.test(message)) {
+          openConflictPrompt(content, wordCount)
+        }
+      })
   }
 
   const previewHtml = useMemo(() => {
@@ -617,6 +790,11 @@ export const App = () => {
   const previewMarkdown = useMemo(() => {
     if (!activeChapter) return ''
     return editor.blocksToMarkdownLossy(editor.document as Block[])
+  }, [activeChapter, editor])
+
+  const previewText = useMemo(() => {
+    if (!activeChapter) return ''
+    return getPlainTextFromDoc(editor.document as Block[])
   }, [activeChapter, editor])
 
   if (loading) {
@@ -828,7 +1006,22 @@ export const App = () => {
         />
       )}
 
-      <PreviewModal open={previewOpen} html={previewHtml} markdown={previewMarkdown} onClose={() => setPreviewOpen(false)} />
+      <PreviewModal
+        open={previewOpen}
+        html={previewHtml}
+        markdown={previewMarkdown}
+        text={previewText}
+        onClose={() => setPreviewOpen(false)}
+      />
+
+      <ConflictModal
+        open={Boolean(conflictState)}
+        chapterTitle={conflictState?.chapterTitle ?? ''}
+        serverUpdatedAt={conflictState?.serverUpdatedAt}
+        onOverwrite={handleConflictOverwrite}
+        onSaveCopy={handleConflictSaveCopy}
+        onReload={handleConflictReload}
+      />
 
       <KnowledgeBaseDrawer
         open={knowledgeBaseOpen}

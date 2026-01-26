@@ -6,11 +6,12 @@ type PreviewModalProps = {
   open: boolean
   html: string
   markdown: string
+  text: string
   onClose: () => void
 }
 
-export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProps) => {
-  const [tab, setTab] = useState<'html' | 'markdown'>('html')
+export const PreviewModal = ({ open, html, markdown, text, onClose }: PreviewModalProps) => {
+  const [tab, setTab] = useState<'html' | 'markdown' | 'text'>('html')
 
   // ESC 键关闭
   const handleEscape = useCallback(
@@ -43,12 +44,17 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
   if (!open) return null
 
   const handleDownload = () => {
-    const content = tab === 'html' ? html : markdown
-    const blob = new Blob([content], { type: tab === 'html' ? 'text/html' : 'text/markdown' })
+    const map = {
+      html: { content: html, type: 'text/html', ext: 'html' },
+      markdown: { content: markdown, type: 'text/markdown', ext: 'md' },
+      text: { content: text, type: 'text/plain', ext: 'txt' }
+    }
+    const target = map[tab]
+    const blob = new Blob([target.content], { type: target.type })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `chapter.${tab === 'html' ? 'html' : 'md'}`
+    link.download = `chapter.${target.ext}`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -77,6 +83,15 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
               <FileText size={14} />
               Markdown
             </button>
+            <button
+              className={`preview-tab-btn ${tab === 'text' ? 'active' : ''}`}
+              onClick={() => setTab('text')}
+              aria-pressed={tab === 'text'}
+              data-testid="preview-tab-text"
+            >
+              <FileText size={14} />
+              TXT
+            </button>
             <button className="preview-action-btn" onClick={handleDownload} data-testid="preview-download">
               <Download size={14} />
               下载
@@ -87,11 +102,9 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
           </div>
         </header>
         <div className="preview-body">
-          {tab === 'html' ? (
-            <div className="preview-html" dangerouslySetInnerHTML={{ __html: html }} />
-          ) : (
-            <pre>{markdown}</pre>
-          )}
+          {tab === 'html' && <div className="preview-html" dangerouslySetInnerHTML={{ __html: html }} />}
+          {tab === 'markdown' && <pre>{markdown}</pre>}
+          {tab === 'text' && <pre>{text}</pre>}
         </div>
       </div>
     </div>

@@ -249,9 +249,24 @@ app.put('/api/chapters/:id', (req, res) => {
 })
 
 app.put('/api/chapters/:id/content', (req, res) => {
-  const schema = z.object({ content: z.any(), wordCount: z.number(), updatedAt: z.string().optional() })
+  const schema = z.object({
+    content: z.any(),
+    wordCount: z.number(),
+    updatedAt: z.string().optional(),
+    revision: z.number().optional()
+  })
   const body = schema.parse(req.body)
-  const saved = updateChapterContent({ id: req.params.id, ...body })
+  const existing = getChapter(req.params.id)
+  if (!existing) return res.status(404).json({ error: 'not found' })
+  if (typeof body.revision === 'number' && existing.revision !== body.revision) {
+    return res.status(409).send('conflict')
+  }
+  const saved = updateChapterContent({
+    id: req.params.id,
+    content: body.content,
+    wordCount: body.wordCount,
+    updatedAt: body.updatedAt
+  })
   if (!saved) return res.status(404).json({ error: 'not found' })
   res.json(saved)
 })

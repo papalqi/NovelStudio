@@ -50,7 +50,7 @@ export const updateChapter = (id: string, chapter: Chapter, baseUrl?: string) =>
 
 export const updateChapterContent = (
   id: string,
-  payload: { content: Block[]; wordCount: number; updatedAt?: string },
+  payload: { content: Block[]; wordCount: number; updatedAt?: string; revision?: number },
   baseUrl?: string
 ) =>
   createApiClient(baseUrl).fetchJson<Chapter>(`/api/chapters/${id}/content`, {

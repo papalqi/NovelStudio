@@ -212,8 +212,22 @@ export const useAppData = () => {
   )
 
   const saveChapterContent = useCallback(
-    async (chapterId: string, content: Chapter['content'], wordCount: number, updatedAt?: string) => {
-      const saved = await updateChapterContent(chapterId, { content, wordCount, updatedAt }, apiBaseUrl)
+    async (
+      chapterId: string,
+      content: Chapter['content'],
+      wordCount: number,
+      updatedAt?: string,
+      options?: { revision?: number; skipConflict?: boolean }
+    ) => {
+      const payload: { content: Chapter['content']; wordCount: number; updatedAt?: string; revision?: number } = {
+        content,
+        wordCount,
+        updatedAt
+      }
+      if (!options?.skipConflict && typeof options?.revision === 'number') {
+        payload.revision = options.revision
+      }
+      const saved = await updateChapterContent(chapterId, payload, apiBaseUrl)
       setState((prev) => ({
         ...prev,
         chapters: prev.chapters.map((item) => (item.id === chapterId ? saved : item))
