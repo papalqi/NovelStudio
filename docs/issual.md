@@ -39,6 +39,7 @@
 - [x] 真实点击回归覆盖矩阵与追踪表（RegressionCoverageMatrix/Tracking）
 - [x] 真实反馈验收规则（RealFeedbackRules）
 - [x] E2E 环境编排与数据重置规范（E2EEnvironment + reset）
+- [x] 测试重置安全护栏（仅允许 e2e/tmp 数据目录）
 
 ## 基础能力
 - [ ] 自动保存与冲突处理

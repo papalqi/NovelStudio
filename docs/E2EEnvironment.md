@@ -34,4 +34,5 @@ E2E 使用独立数据目录：`apps/server/data/e2e`，避免污染开发数据
 
 - 测试重置接口：`POST /api/test/reset`（仅在 `NOVELSTUDIO_ALLOW_TEST_RESET=1` 时可用）。
   Playwright 在每个用例前重置数据，避免测试间依赖。
+- 当启用测试重置时，`NOVELSTUDIO_DATA_DIR` 必须包含 `e2e` 或 `tmp` 目录，否则服务启动会直接失败以防误写开发数据。
 - Playwright 失败时保留截图、trace、视频，便于回归定位。

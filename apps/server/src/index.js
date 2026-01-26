@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { z } from 'zod'
 import crypto from 'node:crypto'
+import { dataDir } from './db.js'
 import {
   getSettings,
   saveSettings,
@@ -23,10 +24,16 @@ import {
   addComment
 } from './store.js'
 import { resetDatabase } from './seedUtils.js'
+import { enforceTestResetGuard } from './testGuards.js'
 
 const app = express()
 const port = process.env.PORT || 8787
 const host = process.env.HOST || '0.0.0.0'
+const testResetEnabled = process.env.NOVELSTUDIO_ALLOW_TEST_RESET === '1'
+
+if (testResetEnabled) {
+  enforceTestResetGuard(dataDir)
+}
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -293,7 +300,7 @@ app.post('/api/chapters/:id/comments', (req, res) => {
   res.json(addComment({ id: uuid(), chapterId: req.params.id, author: body.author, body: body.body }))
 })
 
-if (process.env.NOVELSTUDIO_ALLOW_TEST_RESET === '1') {
+if (testResetEnabled) {
   app.post('/api/test/reset', (_req, res) => {
     resetDatabase()
     res.json({ ok: true })
