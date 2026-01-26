@@ -1,35 +1,22 @@
 {
-  "name": "novelstudio",
+  "name": "novelstudioai",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "apps/server"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@blocknote/mantine": "^0.46.1",
-    "@blocknote/react": "^0.46.1",
-    "@emotion/react": "^11.14.0",
-    "@mantine/core": "^8.3.13",
-    "@mantine/hooks": "^8.3.13",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "dev": "concurrently -n web,server -c auto \"npm:dev:web\" \"npm:dev:server\"",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:server": "npm --workspace apps/server run dev",
+    "build": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/web run lint",
+    "test": "npm --workspace apps/web run test",
+    "test:run": "npm --workspace apps/web run test:run",
+    "test:e2e": "npm --workspace apps/web run test:e2e",
+    "test:smoke": "npm --workspace apps/web run test:smoke"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "concurrently": "^9.1.2"
   }
 }

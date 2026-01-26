@@ -1,0 +1,145 @@
+.sidebar {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--panel-border);
+  font-weight: 600;
+}
+
+.explorer-filters {
+  display: grid;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.explorer-filters input,
+.explorer-filters select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e4d5c3;
+  font-size: 13px;
+}
+
+.tree {
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.tree-group {
+  margin-bottom: 12px;
+}
+
+.tree-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tree-group-title button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 6px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tree-group-title button.active {
+  color: var(--ink);
+}
+
+.tree-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tree-children {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tree-item {
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tree-item.selected {
+  background: var(--bg-accent);
+  border-color: #f0d7c0;
+}
+
+.tree-item-title {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.tree-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tree-item-actions {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  display: none;
+  gap: 4px;
+}
+
+.tree-item:hover .tree-item-actions {
+  display: flex;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-draft {
+  background: #f5a623;
+}
+
+.status-review {
+  background: #5c9ded;
+}
+
+.status-done {
+  background: #61c554;
+}
+
+.empty-state {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}

@@ -1,0 +1,49 @@
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 16, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.preview-panel {
+  width: min(960px, 90vw);
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e6e0d6;
+  box-shadow: 0 30px 60px rgba(20, 18, 16, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #efe6d9;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.preview-html {
+  line-height: 1.7;
+}
+
+.preview-body pre {
+  white-space: pre-wrap;
+  background: #f7efe6;
+  padding: 16px;
+  border-radius: 12px;
+}
