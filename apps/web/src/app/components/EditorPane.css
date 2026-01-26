@@ -145,6 +145,71 @@
   transition: all var(--duration-normal) var(--ease-out);
 }
 
+/* ============================================
+ * Side Menu AI
+ * ============================================ */
+.bn-side-menu {
+  position: relative;
+}
+
+.ai-side-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-side-menu {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+  z-index: 3;
+}
+
+.ai-side-menu-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--easing-out);
+}
+
+.ai-side-menu-action:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.ai-side-menu-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ai-side-menu-status {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.ai-side-menu-status.error {
+  color: var(--color-error);
+}
+
 /* 居中模式 - max-width: 900px */
 .editor-surface.center .bn-editor {
   max-width: 900px;

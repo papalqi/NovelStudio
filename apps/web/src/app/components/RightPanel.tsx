@@ -27,7 +27,7 @@ type RightPanelProps = {
   activeAgentId: string
   onProviderChange: (id: string) => void
   onAgentChange: (id: string) => void
-  onRunAiAction: (action: AiAction) => void
+  onRunAiAction: (action: AiAction, targetBlockId?: string) => Promise<boolean>
   versions: ChapterVersion[]
   activeDiffVersionId?: string
   onCompareVersion: (versionId: string) => void

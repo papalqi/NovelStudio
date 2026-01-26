@@ -335,8 +335,8 @@ export const App = () => {
     void upsertVolume({ ...target, orderIndex: index })
   }
 
-  const handleRunAiAction = async (action: AiAction) => {
-    if (!settings) return
+  const handleRunAiAction = async (action: AiAction, requestedBlockId?: string): Promise<boolean> => {
+    if (!settings) return false
     if (!activeChapter) {
       const requestId = createId()
       pushLog(
@@ -348,12 +348,14 @@ export const App = () => {
           payloadSummary: `action=${action}`
         })
       )
-      return
+      return false
     }
     const currentDoc = editor.document as Block[]
     const scope = isBlockAction(action) ? 'block' : 'chapter'
-    const targetBlock = scope === 'block' ? selectedBlock ?? (editor.getTextCursorPosition().block as Block) : null
-    const targetBlockId = targetBlock?.id
+    const blockFromId = requestedBlockId ? (editor.getBlock(requestedBlockId) as Block | undefined) : undefined
+    const targetBlock =
+      scope === 'block' ? blockFromId ?? selectedBlock ?? (editor.getTextCursorPosition().block as Block) : null
+    const targetBlockId = targetBlock?.id ?? requestedBlockId
     const content =
       scope === 'block'
         ? getPlainTextFromBlock(targetBlock)
@@ -370,7 +372,7 @@ export const App = () => {
           payloadSummary: `action=${action} chapter=${activeChapter.id}`
         })
       )
-      return
+      return false
     }
 
     const requestId = createId()
@@ -435,6 +437,7 @@ export const App = () => {
         request: { ...baseRunRequest, agentSequenceIds: response.agentSequenceIds },
         response: { content: response.content, meta: response.meta }
       })
+      return true
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'AI 调用失败'
       const retryCount =
@@ -476,6 +479,7 @@ export const App = () => {
         request: { ...baseRunRequest, agentSequenceIds: fallbackAgentIds },
         response: { error: message, meta: { retries: retryCount, attempts } }
       })
+      return false
     }
   }
 
@@ -668,6 +672,7 @@ export const App = () => {
           chapter={activeChapter}
           diffVersion={diffVersion}
           onExitDiff={handleExitDiff}
+          onRunAiAction={handleRunAiAction}
           onTitleChange={(title) => handleChapterMetaUpdate({ title })}
           onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
           onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}

@@ -1,7 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState, type FC } from 'react'
 import { BlockNoteView } from '@blocknote/mantine'
 import type { BlockNoteEditor } from '@blocknote/core'
+import { SideMenuExtension } from '@blocknote/core/extensions'
+import { AddBlockButton, DragHandleButton, SideMenu, useComponentsContext, useExtensionState } from '@blocknote/react'
+import { ArrowRight, Edit3, Maximize2, Minimize2, Sparkles } from 'lucide-react'
 import type { Chapter, ChapterStatus, ChapterVersion } from '../../types'
+import type { AiAction } from '../../ai/aiService'
 import { diffLines } from '../../utils/diff'
 import { getPlainTextFromDoc } from '../../utils/text'
 import './EditorPane.css'
@@ -12,11 +16,104 @@ const statusOptions: { value: ChapterStatus; label: string }[] = [
   { value: 'done', label: '完成' }
 ]
 
+const BLOCK_AI_ACTIONS: { action: AiAction; label: string; icon: typeof Edit3 }[] = [
+  { action: 'rewrite', label: '改写', icon: Edit3 },
+  { action: 'expand', label: '扩写', icon: Maximize2 },
+  { action: 'shorten', label: '缩写', icon: Minimize2 },
+  { action: 'continue', label: '续写', icon: ArrowRight }
+]
+
+type BlockAiSideMenuProps = {
+  onRunAiAction: (action: AiAction, targetBlockId?: string) => Promise<boolean>
+  dragHandleMenu?: FC
+}
+
+const BlockAiSideMenu = ({ onRunAiAction, dragHandleMenu }: BlockAiSideMenuProps) => {
+  const [open, setOpen] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [activeAction, setActiveAction] = useState<AiAction | null>(null)
+  const Components = useComponentsContext()
+  const block = useExtensionState(SideMenuExtension, {
+    selector: (state) => state?.block
+  })
+
+  useEffect(() => {
+    setOpen(false)
+    setStatus('idle')
+    setActiveAction(null)
+  }, [block?.id])
+
+  if (!block) return null
+
+  const handleActionClick = async (action: AiAction) => {
+    setOpen(true)
+    setStatus('loading')
+    setActiveAction(action)
+    const success = await onRunAiAction(action, block.id)
+    if (success) {
+      setStatus('idle')
+      setActiveAction(null)
+      setOpen(false)
+      return
+    }
+    setStatus('error')
+  }
+
+  const SideMenuButton = Components?.SideMenu.Button
+  const activeLabel = BLOCK_AI_ACTIONS.find((item) => item.action === activeAction)?.label
+
+  return (
+    <SideMenu>
+      <AddBlockButton />
+      <DragHandleButton dragHandleMenu={dragHandleMenu} />
+      {SideMenuButton ? (
+        <SideMenuButton
+          className="bn-button ai-side-menu-trigger"
+          label="AI"
+          icon={<Sparkles size={16} />}
+          onClick={() => setOpen((prev) => !prev)}
+        />
+      ) : (
+        <button
+          type="button"
+          className="ai-side-menu-trigger"
+          aria-label="AI"
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          <Sparkles size={16} />
+        </button>
+      )}
+      {open && (
+        <div className="ai-side-menu" role="menu">
+          {BLOCK_AI_ACTIONS.map(({ action, label, icon: Icon }) => (
+            <button
+              key={action}
+              type="button"
+              className="ai-side-menu-action"
+              onClick={() => handleActionClick(action)}
+              disabled={status === 'loading'}
+            >
+              <Icon size={14} />
+              <span>{label}</span>
+            </button>
+          ))}
+          {status !== 'idle' && (
+            <div className={`ai-side-menu-status ${status}`}>
+              {status === 'loading' ? `${activeLabel ?? 'AI'} 处理中...` : `${activeLabel ?? 'AI'} 失败，请重试`}
+            </div>
+          )}
+        </div>
+      )}
+    </SideMenu>
+  )
+}
+
 type EditorPaneProps = {
   editor: BlockNoteEditor
   chapter: Chapter | null
   diffVersion?: ChapterVersion | null
   onExitDiff?: () => void
+  onRunAiAction: (action: AiAction, targetBlockId?: string) => Promise<boolean>
   onTitleChange: (title: string) => void
   onStatusChange: (status: ChapterStatus) => void
   onTagsChange: (tags: string[]) => void
@@ -32,6 +129,7 @@ export const EditorPane = ({
   chapter,
   diffVersion,
   onExitDiff,
+  onRunAiAction,
   onTitleChange,
   onStatusChange,
   onTagsChange,
@@ -174,7 +272,12 @@ export const EditorPane = ({
         </div>
       </div>
       <div className={`editor-surface ${editorWidth === 'center' ? 'center' : ''}`} data-testid="editor-content">
-        <BlockNoteView editor={editor} onChange={onContentChange} onSelectionChange={onSelectionChange} />
+        <BlockNoteView
+          editor={editor}
+          onChange={onContentChange}
+          onSelectionChange={onSelectionChange}
+          sideMenu={(props) => <BlockAiSideMenu {...props} onRunAiAction={onRunAiAction} />}
+        />
       </div>
     </section>
   )
