@@ -12,6 +12,7 @@ export interface SelectProps {
   onChange: (value: string) => void
   label?: string
   placeholder?: string
+  testId?: string
 }
 
 export const Select = ({
@@ -19,7 +20,8 @@ export const Select = ({
   value,
   onChange,
   label,
-  placeholder = '请选择...'
+  placeholder = '请选择...',
+  testId
 }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -80,7 +82,7 @@ export const Select = ({
   )
 
   return (
-    <div className="select-wrapper" ref={containerRef}>
+    <div className="select-wrapper" ref={containerRef} data-testid={testId}>
       {label && <label className="select-label">{label}</label>}
       <div
         className={`select-trigger ${isOpen ? 'select-open' : ''}`}
@@ -130,4 +132,3 @@ export const Select = ({
     </div>
   )
 }
-

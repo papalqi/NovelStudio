@@ -52,11 +52,11 @@ export const KnowledgeBaseDrawer = ({
   if (!open) return null
   
   return (
-    <div className="knowledge-drawer-overlay" onClick={onClose}>
-      <aside className="knowledge-drawer" onClick={e => e.stopPropagation()}>
+    <div className="knowledge-drawer-overlay" onClick={onClose} data-testid="knowledge-overlay">
+      <aside className="knowledge-drawer" onClick={e => e.stopPropagation()} data-testid="knowledge-drawer">
         <header className="knowledge-drawer-header">
           <h2>📚 资料库</h2>
-          <Button variant="icon" onClick={onClose}>
+          <Button variant="icon" onClick={onClose} data-testid="knowledge-close">
             <X size={20} />
           </Button>
         </header>
@@ -69,6 +69,7 @@ export const KnowledgeBaseDrawer = ({
                 key={type.value}
                 className={`knowledge-type-tab ${activeType === type.value ? 'active' : ''}`}
                 onClick={() => setActiveType(type.value)}
+                data-testid={`knowledge-tab-${type.value}`}
               >
                 {type.icon}
                 <span>{type.label}</span>
@@ -85,6 +86,7 @@ export const KnowledgeBaseDrawer = ({
                 placeholder="搜索..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                data-testid="knowledge-search"
               />
             </div>
             <div className="knowledge-add">
@@ -94,8 +96,9 @@ export const KnowledgeBaseDrawer = ({
                 value={newNoteTitle}
                 onChange={e => setNewNoteTitle(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCreateNote()}
+                data-testid="knowledge-new-title"
               />
-              <Button variant="primary" size="sm" onClick={handleCreateNote}>
+              <Button variant="primary" size="sm" onClick={handleCreateNote} data-testid="knowledge-add">
                 <Plus size={16} />
               </Button>
             </div>
@@ -117,6 +120,7 @@ export const KnowledgeBaseDrawer = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => setEditingNote(note)}
+                        data-testid={`knowledge-edit-${note.id}`}
                       >
                         编辑
                       </Button>
@@ -124,6 +128,7 @@ export const KnowledgeBaseDrawer = ({
                         variant="icon"
                         size="sm"
                         onClick={() => onDeleteNote(note.id)}
+                        data-testid={`knowledge-delete-${note.id}`}
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -150,6 +155,7 @@ export const KnowledgeBaseDrawer = ({
                 label="标题"
                 value={editingNote.title}
                 onChange={e => setEditingNote({...editingNote, title: e.target.value})}
+                data-testid="knowledge-edit-title"
               />
               <textarea
                 className="knowledge-edit-content"
@@ -160,9 +166,10 @@ export const KnowledgeBaseDrawer = ({
                   content: {...editingNote.content, description: e.target.value}
                 })}
                 rows={8}
+                data-testid="knowledge-edit-description"
               />
               <div className="knowledge-edit-actions">
-                <Button variant="ghost" onClick={() => setEditingNote(null)}>
+                <Button variant="ghost" onClick={() => setEditingNote(null)} data-testid="knowledge-edit-cancel">
                   取消
                 </Button>
                 <Button
@@ -171,6 +178,7 @@ export const KnowledgeBaseDrawer = ({
                     onSaveNote(editingNote)
                     setEditingNote(null)
                   }}
+                  data-testid="knowledge-edit-save"
                 >
                   保存
                 </Button>

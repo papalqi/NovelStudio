@@ -54,8 +54,8 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
   }
 
   return (
-    <div className="preview-overlay" onClick={handleBackdropClick}>
-      <div className="preview-panel" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <div className="preview-overlay" onClick={handleBackdropClick} data-testid="preview-overlay">
+      <div className="preview-panel" role="dialog" aria-modal="true" aria-labelledby="preview-title" data-testid="preview-panel">
         <header>
           <h2 id="preview-title">发布预览</h2>
           <div className="preview-actions">
@@ -63,6 +63,7 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
               className={`preview-tab-btn ${tab === 'html' ? 'active' : ''}`}
               onClick={() => setTab('html')}
               aria-pressed={tab === 'html'}
+              data-testid="preview-tab-html"
             >
               <FileCode size={14} />
               HTML
@@ -71,15 +72,16 @@ export const PreviewModal = ({ open, html, markdown, onClose }: PreviewModalProp
               className={`preview-tab-btn ${tab === 'markdown' ? 'active' : ''}`}
               onClick={() => setTab('markdown')}
               aria-pressed={tab === 'markdown'}
+              data-testid="preview-tab-markdown"
             >
               <FileText size={14} />
               Markdown
             </button>
-            <button className="preview-action-btn" onClick={handleDownload}>
+            <button className="preview-action-btn" onClick={handleDownload} data-testid="preview-download">
               <Download size={14} />
               下载
             </button>
-            <button className="preview-close-btn" onClick={onClose} aria-label="关闭">
+            <button className="preview-close-btn" onClick={onClose} aria-label="关闭" data-testid="preview-close">
               <X size={16} />
             </button>
           </div>

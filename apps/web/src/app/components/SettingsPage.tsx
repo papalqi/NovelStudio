@@ -69,6 +69,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   })
                 }
                 placeholder="输入作者名称"
+                data-testid="settings-author-name"
               />
             </div>
           </div>
@@ -96,6 +97,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   { value: 'light', label: '浅色' },
                   { value: 'dark', label: '深色' }
                 ]}
+                testId="settings-theme"
               />
             </div>
           </div>
@@ -111,6 +113,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   })
                 }
                 placeholder="系统默认字体"
+                data-testid="settings-font-family"
               />
             </div>
           </div>
@@ -129,6 +132,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   { value: 'full', label: '全宽' },
                   { value: 'center', label: '居中' }
                 ]}
+                testId="settings-editor-width"
               />
             </div>
           </div>
@@ -148,6 +152,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   value={provider.name}
                   onChange={(e) => updateProvider(provider.id, { name: e.target.value })}
                   placeholder="Provider 名称"
+                  data-testid={`settings-provider-name-${provider.id}`}
                 />
                 <Button
                   variant="danger"
@@ -158,6 +163,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                       providers: draft.providers.filter((item) => item.id !== provider.id)
                     })
                   }
+                  data-testid={`settings-provider-delete-${provider.id}`}
                 >
                   删除
                 </Button>
@@ -168,6 +174,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   onChange={(e) => updateProvider(provider.id, { baseUrl: e.target.value })}
                   placeholder="https://api.xxx.com/v1"
                   label="API 地址"
+                  data-testid={`settings-provider-baseurl-${provider.id}`}
                 />
                 <Input
                   value={provider.token}
@@ -175,12 +182,14 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   placeholder="API Token"
                   label="Token"
                   type="password"
+                  data-testid={`settings-provider-token-${provider.id}`}
                 />
                 <Input
                   value={provider.model}
                   onChange={(e) => updateProvider(provider.id, { model: e.target.value })}
                   placeholder="gpt-4"
                   label="模型"
+                  data-testid={`settings-provider-model-${provider.id}`}
                 />
               </div>
             </div>
@@ -197,6 +206,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 ]
               })
             }
+            data-testid="settings-provider-add"
           >
             + 添加 Provider
           </Button>
@@ -216,6 +226,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   value={agent.name}
                   onChange={(e) => updateAgent(agent.id, { name: e.target.value })}
                   placeholder="Agent 名称"
+                  data-testid={`settings-agent-name-${agent.id}`}
                 />
                 <Button
                   variant="danger"
@@ -226,6 +237,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                       agents: draft.agents.filter((item) => item.id !== agent.id)
                     })
                   }
+                  data-testid={`settings-agent-delete-${agent.id}`}
                 >
                   删除
                 </Button>
@@ -236,12 +248,14 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   onChange={(value) => updateAgent(agent.id, { providerId: value })}
                   options={draft.providers.map((p) => ({ value: p.id, label: p.name }))}
                   label="Provider"
+                  testId={`settings-agent-provider-${agent.id}`}
                 />
                 <Input
                   value={agent.systemPrompt}
                   onChange={(e) => updateAgent(agent.id, { systemPrompt: e.target.value })}
                   placeholder="输入系统提示词..."
                   label="System Prompt"
+                  data-testid={`settings-agent-prompt-${agent.id}`}
                 />
               </div>
             </div>
@@ -263,6 +277,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 ]
               })
             }
+            data-testid="settings-agent-add"
           >
             + 添加 Agent
           </Button>
@@ -290,6 +305,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 step="0.1"
                 min="0"
                 max="2"
+                data-testid="settings-ai-temperature"
               />
             </div>
           </div>
@@ -306,6 +322,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   })
                 }
                 min="1"
+                data-testid="settings-ai-max-tokens"
               />
             </div>
           </div>
@@ -318,6 +335,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   setDraft({ ...draft, ai: { ...draft.ai, defaultProviderId: value } })
                 }
                 options={draft.providers.map((p) => ({ value: p.id, label: p.name }))}
+                testId="settings-ai-default-provider"
               />
             </div>
           </div>
@@ -330,6 +348,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   setDraft({ ...draft, ai: { ...draft.ai, defaultAgentId: value } })
                 }
                 options={draft.agents.map((a) => ({ value: a.id, label: a.name }))}
+                testId="settings-ai-default-agent"
               />
             </div>
           </div>
@@ -354,6 +373,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   })
                 }
                 placeholder="https://api.example.com"
+                data-testid="settings-sync-api-base"
               />
             </div>
           </div>
@@ -377,6 +397,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                     autosave: { ...draft.autosave, enabled: e.target.checked }
                   })
                 }
+                data-testid="settings-autosave-toggle"
               />
             </div>
           </div>
@@ -394,6 +415,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 }
                 min="1000"
                 step="1000"
+                data-testid="settings-autosave-interval"
               />
             </div>
           </div>
@@ -424,6 +446,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                   { value: 'markdown', label: 'Markdown' },
                   { value: 'html', label: 'HTML' }
                 ]}
+                testId="settings-export-format"
               />
             </div>
           </div>
@@ -458,13 +481,13 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
   return (
     <div className="settings-page">
       <header className="settings-page-header">
-        <button className="settings-back-btn" onClick={onBack}>
+        <button className="settings-back-btn" onClick={onBack} data-testid="settings-back">
           <ArrowLeft size={20} />
           <span>返回</span>
         </button>
         <h1 className="settings-page-title">设置</h1>
         <div className="settings-header-actions">
-          <Button variant="primary" onClick={handleSave}>保存设置</Button>
+          <Button variant="primary" onClick={handleSave} data-testid="settings-save">保存设置</Button>
         </div>
       </header>
 
@@ -477,6 +500,7 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 key={item.id}
                 className={`settings-nav-item ${activeCategory === item.id ? 'active' : ''}`}
                 onClick={() => setActiveCategory(item.id)}
+                data-testid={`settings-nav-${item.id}`}
               >
                 <Icon className="nav-icon" size={18} />
                 <span>{item.label}</span>
@@ -490,4 +514,3 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
     </div>
   )
 }
-

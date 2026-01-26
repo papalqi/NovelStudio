@@ -95,6 +95,7 @@ export const ContextMenu = ({ items, position, onClose }: ContextMenuProps) => {
             key={item.id}
             className={`context-menu-item${item.danger ? ' danger' : ''}`}
             onClick={() => handleItemClick(item)}
+            data-testid={`context-${item.id}`}
           >
             {item.icon && <span className="context-menu-icon">{item.icon}</span>}
             <span className="context-menu-label">{item.label}</span>
@@ -105,4 +106,3 @@ export const ContextMenu = ({ items, position, onClose }: ContextMenuProps) => {
     </div>
   )
 }
-

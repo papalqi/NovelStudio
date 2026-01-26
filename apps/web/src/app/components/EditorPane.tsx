@@ -54,6 +54,7 @@ export const EditorPane = ({
             className="chapter-title-input"
             value={chapter.title}
             onChange={(event) => onTitleChange(event.target.value)}
+            data-testid="editor-title"
           />
           <div className="chapter-meta">
             {chapter.wordCount}字 / 目标 {chapter.targetWordCount}字 · 更新 {chapter.updatedAt}
@@ -66,6 +67,7 @@ export const EditorPane = ({
           <select
             value={chapter.status}
             onChange={(event) => onStatusChange(event.target.value as ChapterStatus)}
+            data-testid="editor-status"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -85,19 +87,21 @@ export const EditorPane = ({
                   .filter(Boolean)
               )
             }
+            data-testid="editor-tags"
           />
           <input
             className="target-input"
             type="number"
             value={chapter.targetWordCount}
             onChange={(event) => onTargetWordCountChange(Number(event.target.value))}
+            data-testid="editor-target-word-count"
           />
-          <button className="ghost-button" onClick={onCreateVersion}>
+          <button className="ghost-button" onClick={onCreateVersion} data-testid="editor-save-version">
             保存版本
           </button>
         </div>
       </div>
-      <div className={`editor-surface ${editorWidth === 'center' ? 'center' : ''}`}>
+      <div className={`editor-surface ${editorWidth === 'center' ? 'center' : ''}`} data-testid="editor-content">
         <BlockNoteView editor={editor} onChange={onContentChange} onSelectionChange={onSelectionChange} />
       </div>
     </section>

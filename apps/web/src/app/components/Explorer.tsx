@@ -111,33 +111,33 @@ export const Explorer = ({
     const volume = volumes.find((v) => v.id === volumeId)
     return [
       {
-        id: 'add-chapter',
+        id: 'volume-add-chapter',
         label: '新建章节',
         icon: <Plus size={16} />,
         onClick: () => onCreateChapter(volumeId)
       },
       { type: 'separator' as const },
       {
-        id: 'move-up',
+        id: 'volume-move-up',
         label: '上移',
         icon: <ChevronUp size={16} />,
         onClick: () => onMoveVolume(volumeId, 'up')
       },
       {
-        id: 'move-down',
+        id: 'volume-move-down',
         label: '下移',
         icon: <ChevronDown size={16} />,
         onClick: () => onMoveVolume(volumeId, 'down')
       },
       { type: 'separator' as const },
       {
-        id: 'rename',
+        id: 'volume-rename',
         label: '重命名',
         icon: <Pencil size={16} />,
         onClick: () => handleOpenRenameModal('volume', volumeId, volume?.title || '')
       },
       {
-        id: 'delete',
+        id: 'volume-delete',
         label: '删除',
         icon: <Trash2 size={16} />,
         danger: true,
@@ -150,14 +150,14 @@ export const Explorer = ({
     const chapter = chapters.find((c) => c.id === chapterId)
     return [
       {
-        id: 'rename',
+        id: 'chapter-rename',
         label: '重命名',
         icon: <Pencil size={16} />,
         onClick: () => handleOpenRenameModal('chapter', chapterId, chapter?.title || '')
       },
       { type: 'separator' as const },
       {
-        id: 'delete',
+        id: 'chapter-delete',
         label: '删除',
         icon: <Trash2 size={16} />,
         danger: true,
@@ -170,7 +170,7 @@ export const Explorer = ({
     <aside className="sidebar">
       <div className="panel-header">
         <span>资源管理器</span>
-        <button className="mini-button" onClick={onCreateVolume}>
+        <button className="mini-button" onClick={onCreateVolume} data-testid="explorer-new-volume">
           + 新卷
         </button>
       </div>
@@ -179,10 +179,12 @@ export const Explorer = ({
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="搜索章节"
+          data-testid="explorer-search"
         />
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value as ChapterStatus | 'all')}
+          data-testid="explorer-status-filter"
         >
           <option value="all">全部状态</option>
           <option value="draft">草稿</option>
@@ -206,6 +208,7 @@ export const Explorer = ({
                 <button
                   className={activeVolumeId === volume.id ? 'active' : ''}
                   onClick={() => onSelectVolume(volume.id)}
+                  data-testid={`explorer-volume-${volume.id}`}
                 >
                   <span className="tree-icon">▸</span>
                   {volume.title}
@@ -237,6 +240,7 @@ export const Explorer = ({
                           onSelectChapter(chapter.id)
                         }
                       }}
+                      data-testid={`explorer-chapter-${chapter.id}`}
                     >
                       <span className={`status-dot status-${chapter.status}`} />
                       <span className="tree-item-title">{chapter.title}</span>
@@ -288,12 +292,13 @@ export const Explorer = ({
               }
             }}
             autoFocus
+            data-testid="explorer-rename-input"
           />
           <div className="rename-modal-actions">
-            <button className="ghost-button" onClick={handleCloseRenameModal}>
+            <button className="ghost-button" onClick={handleCloseRenameModal} data-testid="explorer-rename-cancel">
               取消
             </button>
-            <button className="mini-button" onClick={handleConfirmRename}>
+            <button className="mini-button" onClick={handleConfirmRename} data-testid="explorer-rename-confirm">
               确定
             </button>
           </div>

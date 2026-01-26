@@ -83,12 +83,14 @@ export const RightPanel = ({
             options={providerOptions}
             value={activeProviderId}
             onChange={onProviderChange}
+            testId="rightpanel-provider"
           />
           <Select
             label="Agent"
             options={agentOptions}
             value={activeAgentId}
             onChange={onAgentChange}
+            testId="rightpanel-agent"
           />
 
           <Card className="block-info-card">
@@ -105,6 +107,7 @@ export const RightPanel = ({
                 key={action}
                 className="ai-action-button"
                 onClick={() => onRunAiAction(action)}
+                data-testid={`ai-block-${action}`}
               >
                 <Icon size={16} />
                 <span>{label}</span>
@@ -119,6 +122,7 @@ export const RightPanel = ({
                 key={action}
                 className="ai-action-button"
                 onClick={() => onRunAiAction(action)}
+                data-testid={`ai-chapter-${action}`}
               >
                 <Icon size={16} />
                 <span>{label}</span>
@@ -134,7 +138,7 @@ export const RightPanel = ({
 
       <Accordion title="版本历史" defaultOpen={false}>
         <div className="version-content">
-          <Button variant="ghost" size="sm" onClick={onRefreshVersions}>
+          <Button variant="ghost" size="sm" onClick={onRefreshVersions} data-testid="versions-refresh">
             <RefreshCw size={14} />
             刷新版本
           </Button>
@@ -142,7 +146,12 @@ export const RightPanel = ({
             {versions.map((version) => (
               <div key={version.id} className="version-item">
                 <span>{version.createdAt}</span>
-                <Button variant="ghost" size="sm" onClick={() => onRestoreVersion(version.id)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRestoreVersion(version.id)}
+                  data-testid={`version-restore-${version.id}`}
+                >
                   回滚
                 </Button>
               </div>
@@ -170,6 +179,7 @@ export const RightPanel = ({
             placeholder="留下评论"
             value={commentBody}
             onChange={(event) => setCommentBody(event.target.value)}
+            data-testid="comment-input"
           />
           <Button
             variant="primary"
@@ -178,6 +188,7 @@ export const RightPanel = ({
               onAddComment(authorName, commentBody.trim())
               setCommentBody('')
             }}
+            data-testid="comment-send"
           >
             发送评论
           </Button>
