@@ -1,133 +1,205 @@
 import { test, expect } from '@playwright/test'
+import { withRealFeedback } from './realFeedback'
+
+const getVolumeCount = async (page: import('@playwright/test').Page) =>
+  page.locator('[data-testid^="explorer-volume-"]').count()
+
+const getChapterCount = async (page: import('@playwright/test').Page) =>
+  page.locator('[data-testid^="explorer-chapter-"]').count()
+
+const waitForExplorer = async (page: import('@playwright/test').Page) => {
+  await expect(page.getByText('资源管理器')).toBeVisible()
+}
+
+const createVolumeWithFeedback = async (page: import('@playwright/test').Page) => {
+  const before = await getVolumeCount(page)
+  await withRealFeedback(page, {
+    api: { url: '/api/volumes', method: 'POST' },
+    action: async () => {
+      await page.getByTestId('explorer-new-volume').click()
+    },
+    ui: async () => {
+      await expect.poll(async () => getVolumeCount(page)).toBeGreaterThanOrEqual(before + 1)
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await expect.poll(async () => getVolumeCount(page)).toBeGreaterThanOrEqual(before + 1)
+    }
+  })
+}
 
 test('basic navigation and volume creation', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText('资源管理器')).toBeVisible()
+  await waitForExplorer(page)
 
-  // Create a new volume
-  await page.getByRole('button', { name: '+ 新卷' }).click()
-
-  // Verify a volume exists (use first() to handle multiple volumes)
-  await expect(page.locator('.tree-group-title button').first()).toBeVisible()
+  await createVolumeWithFeedback(page)
 })
 
 test('chapter creation via context menu', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText('资源管理器')).toBeVisible()
+  await waitForExplorer(page)
 
-  // Create a volume first
-  await page.getByRole('button', { name: '+ 新卷' }).click()
+  await createVolumeWithFeedback(page)
 
-  // Wait for new volume to appear - use first() since there might be existing data
-  await expect(page.locator('.tree-group-title button').first()).toBeVisible()
+  const before = await getChapterCount(page)
+  const firstVolume = page.locator('[data-testid^="explorer-volume-"]').first()
 
-  // Right-click on the first volume to open context menu
-  await page.locator('.tree-group-title button').first().click({ button: 'right' })
-
-  // Click "新建章节" in the context menu
-  await page.getByText('新建章节').click()
-
-  // Verify chapter is created - look for it in the tree sidebar
-  await expect(page.locator('.tree-item').first()).toBeVisible()
+  await withRealFeedback(page, {
+    api: { url: '/api/chapters', method: 'POST' },
+    action: async () => {
+      await firstVolume.click({ button: 'right' })
+      await page.getByTestId('context-volume-add-chapter').click()
+    },
+    ui: async () => {
+      await expect.poll(async () => getChapterCount(page)).toBeGreaterThanOrEqual(before + 1)
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await expect.poll(async () => getChapterCount(page)).toBeGreaterThanOrEqual(before + 1)
+    }
+  })
 })
 
 test('theme toggle works', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText('资源管理器')).toBeVisible()
+  await waitForExplorer(page)
 
-  // Check initial theme is light
   const html = page.locator('html')
-  await expect(html).toHaveAttribute('data-theme', 'light')
+  const initialTheme = (await html.getAttribute('data-theme')) ?? 'light'
+  const expectedTheme = initialTheme === 'dark' ? 'light' : 'dark'
 
-  // Click theme toggle button (Moon icon for switching to dark)
-  await page.getByTitle('深色模式').click()
-
-  // Verify theme changed to dark
-  await expect(html).toHaveAttribute('data-theme', 'dark')
-
-  // Click again to switch back to light
-  await page.getByTitle('浅色模式').click()
-  await expect(html).toHaveAttribute('data-theme', 'light')
+  await withRealFeedback(page, {
+    api: { url: '/api/settings', method: 'PUT' },
+    action: async () => {
+      await page.getByTestId('topbar-theme-toggle').click()
+    },
+    ui: async () => {
+      await expect(html).toHaveAttribute('data-theme', expectedTheme)
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', expectedTheme)
+    }
+  })
 })
 
-test('settings panel opens and closes', async ({ page }) => {
+test('settings panel saves and persists', async ({ page }) => {
   await page.goto('/')
+  await waitForExplorer(page)
 
-  // Click settings button
-  await page.getByTitle('设置').click()
-
-  // Verify settings panel is visible - use heading role
+  await page.getByTestId('topbar-settings').click()
   await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '个人资料' })).toBeVisible()
 
-  // Close the settings panel
-  await page.getByRole('button', { name: '取消' }).click()
+  const newAuthorName = `测试作者-${Date.now()}`
+  await page.getByTestId('settings-author-name').fill(newAuthorName)
+
+  await withRealFeedback(page, {
+    api: { url: '/api/settings', method: 'PUT' },
+    action: async () => {
+      await page.getByTestId('settings-save').click()
+    },
+    ui: async () => {
+      await expect(page.locator('[data-testid="settings-save"]')).toHaveCount(0)
+      await expect(page.getByText(`作者：${newAuthorName}`)).toBeVisible()
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await expect(page.getByText(`作者：${newAuthorName}`)).toBeVisible()
+    }
+  })
 })
 
-test('knowledge base drawer opens and closes', async ({ page }) => {
+test('knowledge base drawer create note persists', async ({ page }) => {
   await page.goto('/')
+  await waitForExplorer(page)
 
-  // Click knowledge base button
-  await page.getByTitle('资料库').click()
+  const noteTitle = `测试角色-${Date.now()}`
 
-  // Verify drawer is visible
-  await expect(page.getByText('📚 资料库')).toBeVisible()
-  // Use role button for the tab
-  await expect(page.getByRole('button', { name: '角色' })).toBeVisible()
-
-  // Close by clicking the X button
-  await page.locator('.knowledge-drawer-header button').click()
-
-  // Verify drawer is closed
-  await expect(page.locator('.knowledge-drawer')).not.toBeVisible()
+  await withRealFeedback(page, {
+    api: { url: '/api/notes', method: 'POST' },
+    action: async () => {
+      await page.getByTestId('topbar-knowledge-base').click()
+      await page.getByTestId('knowledge-new-title').fill(noteTitle)
+      await page.getByTestId('knowledge-add').click()
+    },
+    ui: async () => {
+      await expect(page.getByText(noteTitle)).toBeVisible()
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await page.getByTestId('topbar-knowledge-base').click()
+      await expect(page.getByText(noteTitle)).toBeVisible()
+    }
+  })
 })
 
-test('right panel AI actions are available', async ({ page }) => {
-  // Set larger viewport for right panel to be visible
+test('right panel AI action returns feedback', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 800 })
-
   await page.goto('/')
+  await waitForExplorer(page)
 
-  // Create a volume and chapter first
-  await page.getByRole('button', { name: '+ 新卷' }).click()
-  await expect(page.locator('.tree-group-title button').first()).toBeVisible()
+  await createVolumeWithFeedback(page)
 
-  // Right-click on first volume
-  await page.locator('.tree-group-title button').first().click({ button: 'right' })
-  await page.getByText('新建章节').click()
+  const firstVolume = page.locator('[data-testid^="explorer-volume-"]').first()
+  await firstVolume.click({ button: 'right' })
+  await page.getByTestId('context-volume-add-chapter').click()
 
-  // Wait for the chapter to be created
-  await expect(page.locator('.tree-item').first()).toBeVisible()
+  const firstChapter = page.locator('[data-testid^="explorer-chapter-"]').first()
+  await firstChapter.click()
 
-  // Click on the chapter to select it
-  await page.locator('.tree-item').first().click()
+  await page.getByTestId('editor-content').click()
+  await page.keyboard.type('用于 AI 回归的测试内容。')
 
-  // Check right panel is visible and has AI actions
-  // The Accordion title is "AI 执行器"
-  await expect(page.getByText('AI 执行器')).toBeVisible()
+  await page.route('**/api/ai/complete', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: 'AI 模拟内容' })
+    })
+  })
 
-  // Check AI action buttons
-  await expect(page.locator('.ai-action-button').filter({ hasText: '续写' })).toBeVisible()
-  await expect(page.locator('.ai-action-button').filter({ hasText: '改写' })).toBeVisible()
-  await expect(page.locator('.ai-action-button').filter({ hasText: '扩写' })).toBeVisible()
-  await expect(page.locator('.ai-action-button').filter({ hasText: '缩写' })).toBeVisible()
+  await withRealFeedback(page, {
+    api: { url: '/api/ai/complete', method: 'POST' },
+    action: async () => {
+      await page.getByTestId('ai-block-continue').click()
+    },
+    ui: async () => {
+      await expect(page.getByText('续写 完成')).toBeVisible()
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await expect(page.getByText('续写 完成')).toHaveCount(0)
+    }
+  })
 })
 
-test('AI agent selection is available', async ({ page }) => {
+test('AI settings persist after save', async ({ page }) => {
   await page.goto('/')
+  await waitForExplorer(page)
 
-  // Open settings
-  await page.getByTitle('设置').click()
+  await page.getByTestId('topbar-settings').click()
+  await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
 
-  // Navigate to AI settings
-  await page.getByRole('button', { name: 'AI 设置' }).click()
+  await page.getByTestId('settings-nav-ai').click()
 
-  // Verify built-in agents are visible in agent configuration section
-  await expect(page.getByText('Agent 配置')).toBeVisible()
+  const temperatureInput = page.getByTestId('settings-ai-temperature')
+  const currentValue = await temperatureInput.inputValue()
+  const nextValue = (Number(currentValue || '0') + 0.1).toFixed(1)
+  await temperatureInput.fill(nextValue)
 
-  // Look for agent-related UI elements (Input with agent name or Agent section)
-  await expect(page.getByPlaceholder('Agent 名称').first()).toBeVisible()
-
-  // Close settings
-  await page.getByRole('button', { name: '取消' }).click()
+  await withRealFeedback(page, {
+    api: { url: '/api/settings', method: 'PUT' },
+    action: async () => {
+      await page.getByTestId('settings-save').click()
+    },
+    ui: async () => {
+      await expect(page.locator('[data-testid="settings-save"]')).toHaveCount(0)
+    },
+    persist: async () => {
+      await waitForExplorer(page)
+      await page.getByTestId('topbar-settings').click()
+      await page.getByTestId('settings-nav-ai').click()
+      await expect(page.getByTestId('settings-ai-temperature')).toHaveValue(nextValue)
+    }
+  })
 })
