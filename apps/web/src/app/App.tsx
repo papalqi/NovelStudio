@@ -4,7 +4,7 @@ import { TopBar } from './components/TopBar'
 import { Explorer } from './components/Explorer'
 import { EditorPane } from './components/EditorPane'
 import { RightPanel } from './components/RightPanel'
-import { SettingsPanel } from './components/SettingsPanel'
+import { SettingsPage } from './components/SettingsPage'
 import { PreviewModal } from './components/PreviewModal'
 import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
 import { useAppData } from './hooks/useAppData'
@@ -13,6 +13,8 @@ import { estimateWordCount, getPlainTextFromBlock } from '../utils/text'
 import { runAiAction, type AiAction } from '../ai/aiService'
 import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note } from '../types'
 import './App.css'
+
+type AppPage = 'editor' | 'settings'
 
 const formatDate = () => new Date().toISOString().slice(0, 10)
 
@@ -51,7 +53,7 @@ export const App = () => {
   const [activeProviderId, setActiveProviderId] = useState('')
   const [activeAgentId, setActiveAgentId] = useState('')
   const [aiLogs, setAiLogs] = useState<string[]>([])
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [knowledgeBaseOpen, setKnowledgeBaseOpen] = useState(false)
 
@@ -256,7 +258,7 @@ export const App = () => {
       <TopBar
         authorName={settings?.profile.authorName ?? '匿名作者'}
         offline={offline}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => setCurrentPage('settings')}
         onOpenPreview={() => setPreviewOpen(true)}
         onManualSync={handleManualSync}
         autosaveEnabled={settings?.autosave.enabled ?? true}
@@ -344,12 +346,13 @@ export const App = () => {
         <span>{offline ? '离线缓存' : '在线同步'}</span>
       </footer>
 
-      <SettingsPanel
-        open={settingsOpen}
-        settings={settings}
-        onClose={() => setSettingsOpen(false)}
-        onSave={(next: Settings) => updateSettings(next)}
-      />
+      {currentPage === 'settings' && (
+        <SettingsPage
+          settings={settings}
+          onBack={() => setCurrentPage('editor')}
+          onSave={(next: Settings) => updateSettings(next)}
+        />
+      )}
 
       <PreviewModal open={previewOpen} html={previewHtml} markdown={previewMarkdown} onClose={() => setPreviewOpen(false)} />
 

@@ -1,19 +1,65 @@
 /* ============================================
- * Settings Panel - macOS System Preferences Style
+ * Settings Page - Full Screen Layout
  * ============================================ */
 
-.settings-container {
+.settings-page {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
   flex-direction: column;
-  height: 70vh;
-  max-height: 600px;
-  min-height: 400px;
+  background: var(--color-bg-primary);
 }
 
 /* ============================================
- * Settings Layout (Nav + Content)
+ * Header
  * ============================================ */
-.settings-layout {
+.settings-page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
+  flex-shrink: 0;
+}
+
+.settings-back-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.settings-back-btn:hover {
+  background: var(--color-accent-subtle);
+}
+
+.settings-page-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.settings-header-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ============================================
+ * Body Layout (Nav + Content)
+ * ============================================ */
+.settings-page-body {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -23,16 +69,16 @@
 /* ============================================
  * Left Navigation
  * ============================================ */
-.settings-nav {
-  width: 180px;
-  padding: var(--space-3);
+.settings-page .settings-nav {
+  width: 220px;
+  padding: var(--space-4);
   border-right: 1px solid var(--color-border-primary);
   background: var(--color-bg-secondary);
   flex-shrink: 0;
   overflow-y: auto;
 }
 
-.settings-nav-item {
+.settings-page .settings-nav-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -46,18 +92,19 @@
   background: transparent;
   width: 100%;
   text-align: left;
+  margin-bottom: var(--space-1);
 }
 
-.settings-nav-item:hover {
+.settings-page .settings-nav-item:hover {
   background: var(--color-bg-tertiary);
 }
 
-.settings-nav-item.active {
+.settings-page .settings-nav-item.active {
   background: var(--color-accent);
   color: white;
 }
 
-.settings-nav-item .nav-icon {
+.settings-page .settings-nav-item .nav-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -66,42 +113,28 @@
 /* ============================================
  * Content Area
  * ============================================ */
-.settings-content {
+.settings-page .settings-content {
   flex: 1;
-  padding: var(--space-4);
+  padding: var(--space-6);
   overflow-y: auto;
   background: var(--color-bg-primary);
 }
 
-.settings-content-inner {
+.settings-page .settings-content-inner {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 560px;
+  max-width: 640px;
 }
 
-/* ============================================
- * Settings Groups (Cards)
- * ============================================ */
-.settings-group {
+/* Reuse existing settings styles */
+.settings-page .settings-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.settings-group-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-tertiary);
-  margin-bottom: var(--space-1);
-}
-
-/* ============================================
- * Settings Row
- * ============================================ */
-.settings-row {
+.settings-page .settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -110,32 +143,32 @@
   border-bottom: 1px solid var(--color-border-secondary);
 }
 
-.settings-row:last-child {
+.settings-page .settings-row:last-child {
   border-bottom: none;
 }
 
-.settings-row-label {
+.settings-page .settings-row-label {
   font-size: 13px;
   color: var(--color-text-primary);
   flex-shrink: 0;
 }
 
-.settings-row-control {
+.settings-page .settings-row-control {
   flex: 1;
-  max-width: 240px;
+  max-width: 280px;
   display: flex;
   justify-content: flex-end;
 }
 
-.settings-row-control .input-wrapper,
-.settings-row-control .select-wrapper {
+.settings-page .settings-row-control .input-wrapper,
+.settings-page .settings-row-control .select-wrapper {
   width: 100%;
 }
 
 /* ============================================
  * Provider / Agent Cards
  * ============================================ */
-.settings-item-card {
+.settings-page .settings-item-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -146,56 +179,39 @@
   transition: box-shadow var(--transition-fast);
 }
 
-.settings-item-card:hover {
+.settings-page .settings-item-card:hover {
   box-shadow: var(--shadow-sm);
 }
 
-.settings-item-header {
+.settings-page .settings-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.settings-item-header .input-wrapper {
+.settings-page .settings-item-header .input-wrapper {
   flex: 1;
 }
 
-.settings-item-fields {
+.settings-page .settings-item-fields {
   display: grid;
   gap: var(--space-3);
 }
 
-.settings-add-button {
+.settings-page .settings-add-button {
   margin-top: var(--space-2);
 }
 
 /* ============================================
- * Footer Actions
- * ============================================ */
-.settings-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4);
-  border-top: 1px solid var(--color-border-primary);
-  background: var(--color-bg-secondary);
-}
-
-.settings-footer-right {
-  display: flex;
-  gap: var(--space-2);
-}
-
-/* ============================================
- * Responsive: Mobile Tab View
+ * Responsive
  * ============================================ */
 @media (max-width: 768px) {
-  .settings-layout {
+  .settings-page-body {
     flex-direction: column;
   }
 
-  .settings-nav {
+  .settings-page .settings-nav {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--color-border-primary);
@@ -207,53 +223,40 @@
     overflow-y: hidden;
   }
 
-  .settings-nav-item {
+  .settings-page .settings-nav-item {
     padding: var(--space-2) var(--space-3);
     white-space: nowrap;
+    margin-bottom: 0;
   }
 
-  .settings-nav-item .nav-icon {
-    width: 16px;
-    height: 16px;
+  .settings-page .settings-content {
+    padding: var(--space-4);
   }
 
-  .settings-content {
-    padding: var(--space-3);
-  }
-
-  .settings-row {
+  .settings-page .settings-row {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-2);
   }
 
-  .settings-row-control {
+  .settings-page .settings-row-control {
     max-width: 100%;
     width: 100%;
-  }
-
-  .settings-footer {
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .settings-footer-right {
-    width: 100%;
-    justify-content: flex-end;
   }
 }
 
 /* ============================================
- * Dark Mode Adjustments
+ * Dark Mode
  * ============================================ */
-html[data-theme='dark'] .settings-nav {
+html[data-theme='dark'] .settings-page .settings-nav {
   background: var(--color-bg-tertiary);
 }
 
-html[data-theme='dark'] .settings-item-card {
+html[data-theme='dark'] .settings-page-header {
   background: var(--color-bg-tertiary);
 }
 
-html[data-theme='dark'] .settings-footer {
+html[data-theme='dark'] .settings-page .settings-item-card {
   background: var(--color-bg-tertiary);
 }
+

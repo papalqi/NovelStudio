@@ -1,29 +1,30 @@
 import { useEffect, useState } from 'react'
-import { User, Palette, Bot, Cloud, Save, Download } from 'lucide-react'
+import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download } from 'lucide-react'
 import type { Settings, Provider, Agent } from '../../types'
 import { createId } from '../../utils/id'
-import { Modal, Card, Input, Select, Toggle, Button } from './common'
-import './SettingsPanel.css'
+import { Card, Input, Select, Toggle, Button } from './common'
+import './SettingsPage.css'
 
-type SettingsPanelProps = {
-  open: boolean
+type SettingsPageProps = {
   settings: Settings | null
-  onClose: () => void
+  onBack: () => void
   onSave: (settings: Settings) => void
 }
 
-type SettingsCategory = 'profile' | 'appearance' | 'ai' | 'sync' | 'autosave' | 'export'
+type SettingsCategory = 'profile' | 'appearance' | 'providers' | 'agents' | 'ai' | 'sync' | 'autosave' | 'export'
 
 const NAV_ITEMS: { id: SettingsCategory; label: string; icon: typeof User }[] = [
   { id: 'profile', label: '个人资料', icon: User },
   { id: 'appearance', label: '外观', icon: Palette },
-  { id: 'ai', label: 'AI 设置', icon: Bot },
+  { id: 'providers', label: 'Provider 配置', icon: Cpu },
+  { id: 'agents', label: 'Agent 配置', icon: Bot },
+  { id: 'ai', label: 'AI 默认参数', icon: Bot },
   { id: 'sync', label: '同步', icon: Cloud },
   { id: 'autosave', label: '自动保存', icon: Save },
   { id: 'export', label: '导出', icon: Download }
 ]
 
-export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanelProps) => {
+export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) => {
   const [draft, setDraft] = useState<Settings | null>(settings)
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('profile')
 
@@ -49,7 +50,7 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
 
   const handleSave = () => {
     onSave(draft)
-    onClose()
+    onBack()
   }
 
   const renderProfileSection = () => (
@@ -136,74 +137,9 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
     </div>
   )
 
-  const renderAISection = () => (
+  const renderProvidersSection = () => (
     <div className="settings-content-inner">
-      {/* AI 默认参数 */}
-      <Card header="默认参数">
-        <div className="settings-group">
-          <div className="settings-row">
-            <span className="settings-row-label">Temperature</span>
-            <div className="settings-row-control">
-              <Input
-                type="number"
-                value={draft.ai.temperature}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    ai: { ...draft.ai, temperature: Number(e.target.value) }
-                  })
-                }
-                step="0.1"
-                min="0"
-                max="2"
-              />
-            </div>
-          </div>
-          <div className="settings-row">
-            <span className="settings-row-label">Max Tokens</span>
-            <div className="settings-row-control">
-              <Input
-                type="number"
-                value={draft.ai.maxTokens}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    ai: { ...draft.ai, maxTokens: Number(e.target.value) }
-                  })
-                }
-                min="1"
-              />
-            </div>
-          </div>
-          <div className="settings-row">
-            <span className="settings-row-label">默认 Provider</span>
-            <div className="settings-row-control">
-              <Select
-                value={draft.ai.defaultProviderId}
-                onChange={(value) =>
-                  setDraft({ ...draft, ai: { ...draft.ai, defaultProviderId: value } })
-                }
-                options={draft.providers.map((p) => ({ value: p.id, label: p.name }))}
-              />
-            </div>
-          </div>
-          <div className="settings-row">
-            <span className="settings-row-label">默认 Agent</span>
-            <div className="settings-row-control">
-              <Select
-                value={draft.ai.defaultAgentId}
-                onChange={(value) =>
-                  setDraft({ ...draft, ai: { ...draft.ai, defaultAgentId: value } })
-                }
-                options={draft.agents.map((a) => ({ value: a.id, label: a.name }))}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Provider 配置 */}
-      <Card header="Provider 配置">
+      <Card header="Provider 列表">
         <div className="settings-group">
           {draft.providers.map((provider) => (
             <div key={provider.id} className="settings-item-card">
@@ -266,9 +202,12 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
           </Button>
         </div>
       </Card>
+    </div>
+  )
 
-      {/* Agent 配置 */}
-      <Card header="Agent 配置">
+  const renderAgentsSection = () => (
+    <div className="settings-content-inner">
+      <Card header="Agent 列表">
         <div className="settings-group">
           {draft.agents.map((agent) => (
             <div key={agent.id} className="settings-item-card">
@@ -327,6 +266,73 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
           >
             + 添加 Agent
           </Button>
+        </div>
+      </Card>
+    </div>
+  )
+
+  const renderAISection = () => (
+    <div className="settings-content-inner">
+      <Card header="默认参数">
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="settings-row-label">Temperature</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.temperature}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    ai: { ...draft.ai, temperature: Number(e.target.value) }
+                  })
+                }
+                step="0.1"
+                min="0"
+                max="2"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">Max Tokens</span>
+            <div className="settings-row-control">
+              <Input
+                type="number"
+                value={draft.ai.maxTokens}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    ai: { ...draft.ai, maxTokens: Number(e.target.value) }
+                  })
+                }
+                min="1"
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">默认 Provider</span>
+            <div className="settings-row-control">
+              <Select
+                value={draft.ai.defaultProviderId}
+                onChange={(value) =>
+                  setDraft({ ...draft, ai: { ...draft.ai, defaultProviderId: value } })
+                }
+                options={draft.providers.map((p) => ({ value: p.id, label: p.name }))}
+              />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">默认 Agent</span>
+            <div className="settings-row-control">
+              <Select
+                value={draft.ai.defaultAgentId}
+                onChange={(value) =>
+                  setDraft({ ...draft, ai: { ...draft.ai, defaultAgentId: value } })
+                }
+                options={draft.agents.map((a) => ({ value: a.id, label: a.name }))}
+              />
+            </div>
+          </div>
         </div>
       </Card>
     </div>
@@ -432,6 +438,10 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
         return renderProfileSection()
       case 'appearance':
         return renderAppearanceSection()
+      case 'providers':
+        return renderProvidersSection()
+      case 'agents':
+        return renderAgentsSection()
       case 'ai':
         return renderAISection()
       case 'sync':
@@ -446,43 +456,38 @@ export const SettingsPanel = ({ open, settings, onClose, onSave }: SettingsPanel
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="设置">
-      <div className="settings-container">
-        <div className="settings-layout">
-          {/* Left Navigation */}
-          <nav className="settings-nav">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon
-              return (
-                <button
-                  key={item.id}
-                  className={`settings-nav-item ${activeCategory === item.id ? 'active' : ''}`}
-                  onClick={() => setActiveCategory(item.id)}
-                >
-                  <Icon className="nav-icon" size={18} />
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </nav>
-
-          {/* Content Area */}
-          <div className="settings-content">{renderContent()}</div>
+    <div className="settings-page">
+      <header className="settings-page-header">
+        <button className="settings-back-btn" onClick={onBack}>
+          <ArrowLeft size={20} />
+          <span>返回</span>
+        </button>
+        <h1 className="settings-page-title">设置</h1>
+        <div className="settings-header-actions">
+          <Button variant="primary" onClick={handleSave}>保存设置</Button>
         </div>
+      </header>
 
-        {/* Footer */}
-        <div className="settings-footer">
-          <div />
-          <div className="settings-footer-right">
-            <Button variant="ghost" onClick={onClose}>
-              取消
-            </Button>
-            <Button variant="primary" onClick={handleSave}>
-              保存设置
-            </Button>
-          </div>
-        </div>
+      <div className="settings-page-body">
+        <nav className="settings-nav">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={item.id}
+                className={`settings-nav-item ${activeCategory === item.id ? 'active' : ''}`}
+                onClick={() => setActiveCategory(item.id)}
+              >
+                <Icon className="nav-icon" size={18} />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="settings-content">{renderContent()}</div>
       </div>
-    </Modal>
+    </div>
   )
 }
+
