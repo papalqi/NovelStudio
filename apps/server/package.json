@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "clean": "node src/seed.js --clean"
   },
   "dependencies": {
     "better-sqlite3": "^12.1.0",

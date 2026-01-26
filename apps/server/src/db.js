@@ -2,8 +2,16 @@ import Database from 'better-sqlite3'
 import path from 'node:path'
 import fs from 'node:fs'
 
-const dataDir = path.resolve(process.cwd(), 'data')
-const dbPath = path.join(dataDir, 'novelstudio.db')
+const resolveDataDir = () => {
+  const override = process.env.NOVELSTUDIO_DATA_DIR
+  if (override && override.trim()) {
+    return path.resolve(override)
+  }
+  return path.resolve(process.cwd(), 'data')
+}
+
+export const dataDir = resolveDataDir()
+export const dbPath = path.join(dataDir, 'novelstudio.db')
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true })
