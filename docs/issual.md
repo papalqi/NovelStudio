@@ -35,6 +35,11 @@
 - [x] 发布预览页
 - [ ] 格式化排版模板
 
+## 测试与回归
+- [x] 真实点击回归覆盖矩阵与追踪表（RegressionCoverageMatrix/Tracking）
+- [x] 真实反馈验收规则（RealFeedbackRules）
+- [x] E2E 环境编排与数据重置规范（E2EEnvironment + reset）
+
 ## 基础能力
 - [ ] 自动保存与冲突处理
 - [x] 本地离线缓存与恢复
