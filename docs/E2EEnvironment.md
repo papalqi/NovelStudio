@@ -25,6 +25,9 @@ E2E 运行时会强制启动独立服务实例，不复用已有本地进程，�
 - `NOVELSTUDIO_E2E_SERVER_PORT`（默认 8788）
 - `NOVELSTUDIO_E2E_API_BASE_URL`（覆盖 `resetTestData` 的请求地址）
 
+测试重置时写入的 `sync.apiBaseUrl` 将根据服务端 `PORT` 生成，
+如需自定义可设置 `NOVELSTUDIO_SEED_API_BASE_URL`。
+
 ## 数据目录隔离
 
 E2E 使用独立数据目录：`apps/server/data/e2e`，避免污染开发数据。

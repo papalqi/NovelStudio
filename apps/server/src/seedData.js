@@ -12,8 +12,15 @@ const paragraph = (id, text) => ({
   children: []
 })
 
+const resolveSeedApiBaseUrl = () => {
+  const override = process.env.NOVELSTUDIO_SEED_API_BASE_URL
+  if (override && override.trim()) return override
+  const port = process.env.PORT || '8787'
+  return `http://localhost:${port}`
+}
+
 export const seedSettings = {
-  sync: { apiBaseUrl: 'http://localhost:8787' },
+  sync: { apiBaseUrl: resolveSeedApiBaseUrl() },
   ui: { theme: 'light', fontFamily: 'IBM Plex Sans', editorWidth: 'full' },
   autosave: { enabled: true, intervalMs: 1500 },
   export: { defaultFormat: 'markdown' },
