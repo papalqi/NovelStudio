@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { withRealFeedback } from './realFeedback'
 import { resetTestData } from './resetTestData'
+import { E2E_API_BASE_URL } from './e2eEnv'
 
 const waitForExplorer = async (page: Page) => {
   await expect(page.getByText('资源管理器')).toBeVisible()
@@ -239,11 +240,11 @@ test('knowledge base references can insert and refresh', async ({ page }) => {
 })
 
 test('AI retry respects request settings', async ({ page, request }) => {
-  const settingsResponse = await request.get('http://localhost:8787/api/settings')
+  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`)
   const settings = await settingsResponse.json()
   settings.ai.request.maxRetries = 1
   settings.ai.request.retryDelayMs = 0
-  await request.put('http://localhost:8787/api/settings', { data: settings })
+  await request.put(`${E2E_API_BASE_URL}/api/settings`, { data: settings })
 
   let callCount = 0
   await page.route('**/api/ai/complete', async (route) => {
@@ -276,15 +277,15 @@ test('AI retry respects request settings', async ({ page, request }) => {
   )
   await page.getByTestId('ai-block-continue').click()
   await successResponse
-  await expect(page.getByText('续写 完成')).toBeVisible()
+  await expect(page.getByTestId('ai-status-latest')).toContainText('续写 完成')
   await page.reload()
   await waitForExplorer(page)
-  await expect(page.getByText('续写 完成')).toHaveCount(0)
+  await expect(page.getByTestId('ai-status-latest')).not.toContainText('续写 完成')
   await expect.poll(() => callCount).toBe(2)
 })
 
 test('agent serial schema output and replay', async ({ page, request }) => {
-  const settingsResponse = await request.get('http://localhost:8787/api/settings')
+  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`)
   const settings = await settingsResponse.json()
   const providerId = settings.providers[0].id
   const schema = JSON.stringify({
@@ -315,7 +316,7 @@ test('agent serial schema output and replay', async ({ page, request }) => {
   settings.ai.defaultAgentId = 'agent-serial-1'
   settings.ai.request.maxRetries = 0
   settings.ai.request.retryDelayMs = 0
-  await request.put('http://localhost:8787/api/settings', { data: settings })
+  await request.put(`${E2E_API_BASE_URL}/api/settings`, { data: settings })
 
   let callCount = 0
   await page.route('**/api/ai/complete', async (route) => {
@@ -358,7 +359,7 @@ test('agent serial schema output and replay', async ({ page, request }) => {
       await page.getByTestId('ai-block-continue').click()
     },
     ui: async () => {
-      await expect(page.getByText('续写 完成')).toBeVisible()
+      await expect(page.getByTestId('ai-status-latest')).toContainText('续写 完成')
     },
     reload: false,
     persist: async () => {
@@ -405,7 +406,7 @@ test('conflict modal appears on revision mismatch', async ({ page, request }) =>
 
   await chapterByName(page, '第1章 试读开篇').click()
 
-  await request.put('http://localhost:8787/api/chapters/chapter-001/content', {
+  await request.put(`${E2E_API_BASE_URL}/api/chapters/chapter-001/content`, {
     data: {
       content: [{ id: 'conflict-block', type: 'paragraph', content: 'server update' }],
       wordCount: 2,

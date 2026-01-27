@@ -4,19 +4,26 @@
 
 ## 启动方式
 
-Playwright 使用 `apps/web/e2e/devServer.js` 启动前后端服务：
+Playwright 使用 `apps/web/e2e/devServer.js` 启动前后端服务（独立端口）：
 
-- Web: `http://localhost:5173`
-- Server: `http://localhost:8787`
+- Web: `http://localhost:5174`
+- Server: `http://localhost:8788`
 
 E2E 运行时会强制启动独立服务实例，不复用已有本地进程，以保证环境一致。
-如本地已有进程占用 5173/8787，请先停止再执行 E2E。
+如本地已有进程占用 5174/8788，E2E 会因为 `--strictPort` 直接失败，请先停止再执行。
 
-启动命令等价于执行根目录的 `npm run dev`，并注入以下环境变量：
+启动命令会分别拉起 Server 与 Web，并注入以下环境变量：
 
 - `NOVELSTUDIO_DATA_DIR=apps/server/data/e2e`
 - `NOVELSTUDIO_ALLOW_TEST_RESET=1`
-- `VITE_API_BASE_URL=http://localhost:8787`
+- `PORT=8788`
+- `VITE_API_BASE_URL=http://localhost:8788`
+
+可通过以下变量覆盖端口：
+
+- `NOVELSTUDIO_E2E_WEB_PORT`（默认 5174）
+- `NOVELSTUDIO_E2E_SERVER_PORT`（默认 8788）
+- `NOVELSTUDIO_E2E_API_BASE_URL`（覆盖 `resetTestData` 的请求地址）
 
 ## 数据目录隔离
 

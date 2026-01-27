@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { withRealFeedback } from './realFeedback'
 import { resetTestData } from './resetTestData'
+import { E2E_API_BASE_URL } from './e2eEnv'
 
 const waitForExplorer = async (page: Page) => {
   await expect(page.getByText('资源管理器')).toBeVisible()
@@ -430,7 +431,7 @@ test('knowledge base and settings coverage', async ({ page }) => {
   await page.getByTestId('settings-ai-temperature').fill('0.9')
 
   await page.getByTestId('settings-nav-sync').click()
-  await page.getByTestId('settings-sync-api-base').fill('http://localhost:8787')
+  await page.getByTestId('settings-sync-api-base').fill(E2E_API_BASE_URL)
 
   await page.getByTestId('settings-nav-autosave').click()
   const autosaveToggle = page.getByTestId('settings-autosave-toggle')
