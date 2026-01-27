@@ -15,6 +15,21 @@ const chapterByName = (page: Page, name: string) =>
 const chapterInVolume = (page: Page, volumeName: string, chapterName: string) =>
   page.locator('.tree-group', { has: volumeByName(page, volumeName) }).getByText(chapterName)
 
+const focusEditor = async (page: Page) => {
+  const editor = page.getByTestId('editor-content')
+  const editable = editor.locator('[contenteditable="true"]').first()
+  await expect(editor).toBeVisible()
+  if (await editable.count()) {
+    await editable.scrollIntoViewIfNeeded()
+    await expect(editable).toBeVisible()
+    await editable.click()
+    await expect(editable).toBeFocused()
+  } else {
+    await editor.scrollIntoViewIfNeeded()
+    await editor.click()
+  }
+}
+
 const ensureAccordionOpen = async (page: Page, title: string) => {
   const button = page.getByRole('button', { name: title })
   const expanded = await button.getAttribute('aria-expanded')
@@ -86,11 +101,19 @@ test('batch copy and move chapters', async ({ page }) => {
       await page.getByRole('button', { name: '确认执行' }).click()
     },
     ui: async () => {
-      await expect(page.getByText('副本')).toBeVisible()
+      const copied = page
+        .locator('.tree-group', { has: volumeByName(page, '第二卷 · 测试') })
+        .locator('.tree-item-title')
+        .filter({ hasText: '副本' })
+      await expect(copied).toHaveCount(2)
     },
     persist: async () => {
       await waitForExplorer(page)
-      await expect(page.getByText('副本')).toBeVisible()
+      const copied = page
+        .locator('.tree-group', { has: volumeByName(page, '第二卷 · 测试') })
+        .locator('.tree-item-title')
+        .filter({ hasText: '副本' })
+      await expect(copied).toHaveCount(2)
     }
   })
 
@@ -164,17 +187,19 @@ test('knowledge base references can insert and refresh', async ({ page }) => {
   await withRealFeedback(page, {
     api: { url: '/api/chapters/chapter-001/content', method: 'PUT' },
     action: async () => {
-      await page.getByTestId('editor-content').click()
-      await page.keyboard.type(' ')
+      await focusEditor(page)
+      await page.keyboard.type('触发保存')
     },
     ui: async () => {
-      await expect(page.getByText('资料卡引用 kb:note-001')).toBeVisible()
-      await expect(page.getByText('主角设定：出身、性格、目标。')).toBeVisible()
+      const editor = page.getByTestId('editor-content')
+      await expect(editor.getByRole('heading', { name: /资料卡引用 kb:note-001/ })).toBeVisible()
+      await expect(editor.getByText('主角设定：出身、性格、目标。')).toBeVisible()
     },
     persist: async () => {
       await waitForExplorer(page)
       await chapterByName(page, '第1章 试读开篇').click()
-      await expect(page.getByText('资料卡引用 kb:note-001')).toBeVisible()
+      const editor = page.getByTestId('editor-content')
+      await expect(editor.getByRole('heading', { name: /资料卡引用 kb:note-001/ })).toBeVisible()
     }
   })
 
@@ -201,13 +226,16 @@ test('knowledge base references can insert and refresh', async ({ page }) => {
     }
   })
 
-  const refreshResponse = page.waitForResponse((response) =>
-    response.url().includes('/api/chapters/chapter-001/content') && response.request().method() === 'PUT'
+  const refreshResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/chapters/chapter-001/content') &&
+      response.request().method() === 'PUT' &&
+      response.ok()
   )
   await page.getByTestId('knowledge-page-refresh').click()
   await refreshResponse
   await page.getByTestId('knowledge-back').click()
-  await expect(page.getByText(updatedDescription)).toBeVisible()
+  await expect(page.getByTestId('editor-content').getByText(updatedDescription)).toBeVisible()
 })
 
 test('AI retry respects request settings', async ({ page, request }) => {
@@ -236,24 +264,23 @@ test('AI retry respects request settings', async ({ page, request }) => {
   await waitForExplorer(page)
 
   await chapterByName(page, '第1章 试读开篇').click()
-  await page.getByTestId('editor-content').click()
+  await focusEditor(page)
   await page.keyboard.type('用于 AI 重试的内容')
+  await expect(page.getByTestId('editor-content').getByText('用于 AI 重试的内容')).toBeVisible()
 
-  await withRealFeedback(page, {
-    api: { url: '/api/ai/complete', method: 'POST' },
-    action: async () => {
-      await page.getByTestId('ai-block-continue').click()
-    },
-    ui: async () => {
-      await expect(page.getByText('续写 完成')).toBeVisible()
-    },
-    persist: async () => {
-      await waitForExplorer(page)
-      await expect(page.getByText('续写 完成')).toHaveCount(0)
-    }
-  })
-
-  expect(callCount).toBe(2)
+  const successResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/ai/complete') &&
+      response.request().method() === 'POST' &&
+      response.ok()
+  )
+  await page.getByTestId('ai-block-continue').click()
+  await successResponse
+  await expect(page.getByText('续写 完成')).toBeVisible()
+  await page.reload()
+  await waitForExplorer(page)
+  await expect(page.getByText('续写 完成')).toHaveCount(0)
+  await expect.poll(() => callCount).toBe(2)
 })
 
 test('agent serial schema output and replay', async ({ page, request }) => {
@@ -306,9 +333,25 @@ test('agent serial schema output and replay', async ({ page, request }) => {
   await waitForExplorer(page)
 
   await chapterByName(page, '第1章 试读开篇').click()
-  await page.getByTestId('editor-content').click()
+  await focusEditor(page)
+  const initialSave = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/chapters/chapter-001/content') &&
+      response.request().method() === 'PUT' &&
+      response.ok()
+  )
   await page.keyboard.type('用于串行 Agent 的输入')
+  await initialSave
+  const inputBlock = page.getByTestId('editor-content').getByText('用于串行 Agent 的输入')
+  await expect(inputBlock).toBeVisible()
+  await inputBlock.click()
 
+  const aiSaveResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/chapters/chapter-001/content') &&
+      response.request().method() === 'PUT' &&
+      response.ok()
+  )
   await withRealFeedback(page, {
     api: { url: '/api/ai/complete', method: 'POST' },
     action: async () => {
@@ -317,21 +360,25 @@ test('agent serial schema output and replay', async ({ page, request }) => {
     ui: async () => {
       await expect(page.getByText('续写 完成')).toBeVisible()
     },
+    reload: false,
     persist: async () => {
+      await aiSaveResponse
+      await page.reload()
       await waitForExplorer(page)
       await chapterByName(page, '第1章 试读开篇').click()
-      await expect(page.getByText('second')).toBeVisible()
+      await expect(page.getByTestId('editor-content').getByText('second')).toBeVisible()
     }
   })
 
-  expect(callCount).toBe(2)
+  await expect.poll(() => callCount).toBe(2)
 
   await ensureAccordionOpen(page, 'AI 控制台')
   const replayButton = page.locator('[data-testid^="ai-run-replay-"]').first()
   await expect(replayButton).toBeVisible()
   await replayButton.click()
   await expect.poll(() => callCount).toBe(4)
-  await expect(page.getByText('重放完成')).toBeVisible()
+  const replayLogs = page.locator('.log-list').getByText('重放完成')
+  await expect(replayLogs).toHaveCount(2)
 })
 
 test('TXT preview export available', async ({ page }) => {
@@ -339,10 +386,11 @@ test('TXT preview export available', async ({ page }) => {
   await waitForExplorer(page)
 
   await chapterByName(page, '第1章 试读开篇').click()
+  await expect(page.getByTestId('editor-content').getByText('这是种子章节内容，用于回归测试。')).toBeVisible()
   await page.getByTestId('topbar-preview').click()
   await page.getByTestId('preview-tab-text').click()
   await expect(page.getByTestId('preview-tab-text')).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByText('这是种子章节内容，用于回归测试。')).toBeVisible()
+  await expect(page.getByTestId('preview-panel').getByText('这是种子章节内容，用于回归测试。')).toBeVisible()
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByTestId('preview-download').click()
@@ -369,7 +417,7 @@ test('conflict modal appears on revision mismatch', async ({ page, request }) =>
     (response) => response.url().includes('/api/chapters/chapter-001/content') && response.status() === 409
   )
 
-  await page.getByTestId('editor-content').click()
+  await focusEditor(page)
   await page.keyboard.type('触发冲突')
   await conflictResponse
   await expect(page.getByTestId('conflict-overlay')).toBeVisible()

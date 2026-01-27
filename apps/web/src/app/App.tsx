@@ -209,31 +209,39 @@ export const App = () => {
     }
     const currentDoc = editor.document as Block[]
     let refreshed = 0
+    let updated = 0
     currentDoc.forEach((block, index) => {
-      if (block.type !== 'heading' || typeof block.content !== 'string') return
-      const noteId = parseReferenceId(block.content)
+      if (block.type !== 'heading') return
+      const headerText = getPlainTextFromBlock(block)
+      const noteId = parseReferenceId(headerText)
       if (!noteId) return
       const note = notes.find((item) => item.id === noteId)
       if (!note) return
       const nextBlock = currentDoc[index + 1]
       const header = buildReferenceHeader(note)
       const snapshot = buildNoteSnapshot(note)
-      if (block.content !== header) {
+      const nextText = getPlainTextFromBlock(nextBlock)
+      const headerChanged = headerText !== header
+      const snapshotChanged = nextBlock?.type === 'paragraph' && nextText !== snapshot
+      if (headerChanged) {
         editor.updateBlock(block.id, { content: header })
       }
-      if (nextBlock?.type === 'paragraph' && typeof nextBlock.content === 'string' && nextBlock.content !== snapshot) {
+      if (snapshotChanged && nextBlock) {
         editor.updateBlock(nextBlock.id, { content: snapshot })
+      }
+      if (headerChanged || snapshotChanged) {
+        updated += 1
       }
       refreshed += 1
     })
-    if (refreshed > 0) {
+    if (updated > 0) {
       handleContentChange()
     }
     pushLog(
       createLogEntry({
         scope: 'knowledge',
         status: 'success',
-        message: refreshed > 0 ? `已刷新 ${refreshed} 条引用` : '未发现可刷新引用',
+        message: updated > 0 ? `已刷新 ${updated} 条引用` : '未发现可刷新引用',
         payloadSummary: `chapter=${activeChapter.id}`
       })
     )
@@ -765,19 +773,19 @@ export const App = () => {
   }
 
   const previewHtml = useMemo(() => {
-    if (!activeChapter) return ''
+    if (!activeChapter || !previewOpen) return ''
     return editor.blocksToHTMLLossy(editor.document as Block[])
-  }, [activeChapter, editor])
+  }, [activeChapter, editor, previewOpen])
 
   const previewMarkdown = useMemo(() => {
-    if (!activeChapter) return ''
+    if (!activeChapter || !previewOpen) return ''
     return editor.blocksToMarkdownLossy(editor.document as Block[])
-  }, [activeChapter, editor])
+  }, [activeChapter, editor, previewOpen])
 
   const previewText = useMemo(() => {
-    if (!activeChapter) return ''
+    if (!activeChapter || !previewOpen) return ''
     return getPlainTextFromDoc(editor.document as Block[])
-  }, [activeChapter, editor])
+  }, [activeChapter, editor, previewOpen])
 
   if (loading) {
     return <div className="app-shell">加载中...</div>

@@ -185,8 +185,10 @@ test('AI settings persist after save', async ({ page }) => {
   await page.getByTestId('topbar-settings').click()
   await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
 
-  await page.getByTestId('settings-nav-agent').click()
-  await page.getByTestId('settings-agent-serial-agent-default').check()
+  await page.getByTestId('settings-nav-agents').click()
+  const serialToggle = page.getByTestId('settings-agent-serial-agent-default')
+  await serialToggle.locator('..').click()
+  await expect(serialToggle).toBeChecked()
   await page.getByTestId('settings-agent-serial-order-agent-default').fill('2')
   const schemaText = '{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}'
   await page.getByTestId('settings-agent-schema-agent-default').fill(schemaText)
@@ -229,7 +231,7 @@ test('AI settings persist after save', async ({ page }) => {
     persist: async () => {
       await waitForExplorer(page)
       await page.getByTestId('topbar-settings').click()
-      await page.getByTestId('settings-nav-agent').click()
+      await page.getByTestId('settings-nav-agents').click()
       await expect(page.getByTestId('settings-agent-serial-agent-default')).toBeChecked()
       await expect(page.getByTestId('settings-agent-serial-order-agent-default')).toHaveValue('2')
       await expect(page.getByTestId('settings-agent-schema-agent-default')).toHaveValue(schemaText)
