@@ -279,6 +279,35 @@ export const runAiCompletion = (
   })()
 }
 
+export type ProviderModelsResponse = {
+  models: string[]
+}
+
+export const fetchProviderModels = (
+  payload: { baseUrl: string; token?: string },
+  baseUrl?: string
+) =>
+  createApiClient(baseUrl).fetchJson<ProviderModelsResponse>('/api/ai/models', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
+export type ProviderTestResponse = {
+  ok: boolean
+  model?: string
+  content?: string
+  latencyMs?: number
+}
+
+export const testProviderConnection = (
+  payload: { provider: { baseUrl: string; token?: string; model: string } },
+  baseUrl?: string
+) =>
+  createApiClient(baseUrl).fetchJson<ProviderTestResponse>('/api/ai/test', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
 export const listAiRuns = (chapterId?: string, baseUrl?: string) => {
   const query = chapterId ? `?chapterId=${encodeURIComponent(chapterId)}` : ''
   return createApiClient(baseUrl).fetchJson<AiRunRecord[]>(`/api/ai/runs${query}`)

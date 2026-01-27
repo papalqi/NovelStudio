@@ -82,6 +82,10 @@ export const RightPanel = ({
 
   const providerOptions = providers.map((p) => ({ value: p.id, label: p.name }))
   const agentOptions = agents.map((a) => ({ value: a.id, label: a.name }))
+  const latestAiEntry = aiLogs.find((entry) => entry.scope === 'ai')
+  const latestAiText = latestAiEntry ? formatLogEntry(latestAiEntry) : '暂无 AI 执行记录'
+  const actionDisabled = !chapter
+  const actionDisabledHint = actionDisabled ? '请先选择章节' : undefined
 
   return (
     <aside className="right-panel">
@@ -116,6 +120,8 @@ export const RightPanel = ({
                 key={action}
                 className="ai-action-button"
                 onClick={() => onRunAiAction(action)}
+                disabled={actionDisabled}
+                title={actionDisabledHint}
                 data-testid={`ai-block-${action}`}
               >
                 <Icon size={16} />
@@ -131,12 +137,19 @@ export const RightPanel = ({
                 key={action}
                 className="ai-action-button"
                 onClick={() => onRunAiAction(action)}
+                disabled={actionDisabled}
+                title={actionDisabledHint}
                 data-testid={`ai-chapter-${action}`}
               >
                 <Icon size={16} />
                 <span>{label}</span>
               </button>
             ))}
+          </div>
+
+          <div className={`ai-status-card ${latestAiEntry?.status ?? 'idle'}`} data-testid="ai-status-latest">
+            <div className="ai-status-label">AI 状态</div>
+            <div className="ai-status-text">{latestAiText}</div>
           </div>
 
           <div className="chapter-pill">

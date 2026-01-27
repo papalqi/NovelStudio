@@ -151,6 +151,31 @@ const DEFAULT_SETTINGS = {
 
 const uuid = () => crypto.randomUUID()
 
+const normalizeBaseUrl = (value) => value.replace(/\/$/, '')
+
+const buildOpenAiEndpoint = (baseUrl, path) => {
+  const normalized = normalizeBaseUrl(baseUrl)
+  const withV1 = normalized.endsWith('/v1') ? normalized : `${normalized}/v1`
+  const trimmedPath = path.replace(/^\//, '')
+  return `${withV1}/${trimmedPath}`
+}
+
+const extractModelIds = (payload) => {
+  if (!payload) return []
+  const data = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.models) ? payload.models : []
+  const ids = data
+    .map((item) => {
+      if (!item) return ''
+      if (typeof item === 'string') return item
+      if (typeof item === 'object') {
+        return item.id || item.model || ''
+      }
+      return ''
+    })
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+  return Array.from(new Set(ids))
+}
+
 const mergeSettings = (stored) => {
   return {
     ...DEFAULT_SETTINGS,
@@ -366,8 +391,7 @@ app.post('/api/ai/complete', async (req, res) => {
   })
   try {
     const body = schema.parse(req.body)
-    const { baseUrl } = body.provider
-    const endpoint = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`
+    const endpoint = buildOpenAiEndpoint(body.provider.baseUrl, '/chat/completions')
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -390,6 +414,80 @@ app.post('/api/ai/complete', async (req, res) => {
     const data = await response.json()
     const content = data.choices?.[0]?.message?.content ?? ''
     res.json({ content })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+app.post('/api/ai/models', async (req, res) => {
+  const schema = z.object({
+    baseUrl: z.string().min(1),
+    token: z.string().optional()
+  })
+
+  try {
+    const body = schema.parse(req.body)
+    const endpoint = buildOpenAiEndpoint(body.baseUrl, '/models')
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        ...(body.token ? { Authorization: `Bearer ${body.token}` } : {})
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      return res.status(500).json({ error: errorText || `请求失败(${response.status})`, status: response.status })
+    }
+
+    const data = await response.json()
+    const models = extractModelIds(data)
+    res.json({ models })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+app.post('/api/ai/test', async (req, res) => {
+  const schema = z.object({
+    provider: z.object({
+      baseUrl: z.string().min(1),
+      token: z.string().optional(),
+      model: z.string().min(1)
+    })
+  })
+
+  try {
+    const body = schema.parse(req.body)
+    const endpoint = buildOpenAiEndpoint(body.provider.baseUrl, '/chat/completions')
+    const startedAt = Date.now()
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(body.provider.token ? { Authorization: `Bearer ${body.provider.token}` } : {})
+      },
+      body: JSON.stringify({
+        model: body.provider.model,
+        messages: [{ role: 'user', content: 'ping' }],
+        temperature: 0,
+        max_tokens: 16
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      return res.status(500).json({ error: errorText || `请求失败(${response.status})`, status: response.status })
+    }
+
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content ?? ''
+    res.json({
+      ok: true,
+      model: body.provider.model,
+      latencyMs: Date.now() - startedAt,
+      content
+    })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }

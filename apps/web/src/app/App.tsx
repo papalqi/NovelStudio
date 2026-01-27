@@ -16,7 +16,7 @@ import { createId } from '../utils/id'
 import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
 import { nowMs } from '../utils/time'
 import { createLogEntry, type LogEntry } from '../utils/logging'
-import { runAiAction, type AiAction } from '../ai/aiService'
+import { runAiAction, getAiActionLabel, type AiAction } from '../ai/aiService'
 import { createAiRun, listAiRuns } from '../api'
 import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note, AiRunRecord } from '../types'
 import './App.css'
@@ -286,26 +286,28 @@ export const App = () => {
   const isBlockAction = (action: AiAction) =>
     action === 'rewrite' || action === 'expand' || action === 'shorten' || action === 'continue'
 
-  const applyAiResult = (action: AiAction, resultContent: string, targetBlockId?: string) => {
+  const applyAiResult = (action: AiAction, resultContent: string, targetBlockId?: string): string | null => {
     if (isBlockAction(action)) {
       const fallbackBlock = editor.getTextCursorPosition().block as Block
       const blockId = targetBlockId ?? selectedBlock?.id ?? fallbackBlock?.id
       if (blockId) {
         editor.updateBlock(blockId, { content: resultContent })
+        return blockId
       }
-      return
+      return null
     }
 
     const currentDoc = editor.document as Block[]
+    const newBlockId = createId()
+    const newBlock: Block = { id: newBlockId, type: 'paragraph', content: resultContent }
     const lastBlock = currentDoc[currentDoc.length - 1]
     const referenceId = lastBlock?.id ?? currentDoc[0]?.id
     if (referenceId) {
-      editor.insertBlocks(
-        [{ id: createId(), type: 'paragraph', content: resultContent }],
-        referenceId,
-        'after'
-      )
+      editor.insertBlocks([newBlock], referenceId, 'after')
+      return newBlockId
     }
+    editor.replaceBlocks(currentDoc, [newBlock])
+    return newBlockId
   }
 
   const persistAiRun = useCallback(
@@ -474,10 +476,16 @@ export const App = () => {
     void upsertVolume({ ...target, orderIndex: index })
   }
 
+  const focusAiResult = (blockId: string | null) => {
+    if (!blockId) return
+    editor.setTextCursorPosition(blockId, 'end')
+    editor.focus()
+  }
+
   const handleRunAiAction = async (action: AiAction, requestedBlockId?: string): Promise<boolean> => {
     if (!settings) return false
+    const requestId = createId()
     if (!activeChapter) {
-      const requestId = createId()
       pushLog(
         createLogEntry({
           requestId,
@@ -501,7 +509,6 @@ export const App = () => {
         : (editor.blocksToMarkdownLossy(currentDoc) as string)
 
     if (!content) {
-      const requestId = createId()
       pushLog(
         createLogEntry({
           requestId,
@@ -514,7 +521,6 @@ export const App = () => {
       return false
     }
 
-    const requestId = createId()
     const requestStartedAt = nowMs()
     const runContext = `章节：${activeChapter.title}\n标签：${activeChapter.tags.join(',')}`
     const basePayloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
@@ -533,6 +539,15 @@ export const App = () => {
     }
 
     try {
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'info',
+          message: `${getAiActionLabel(action)} 处理中`,
+          payloadSummary: basePayloadSummary
+        })
+      )
       const response = await runAiAction({
         action,
         content,
@@ -543,7 +558,8 @@ export const App = () => {
         providerId: resolvedProviderId,
         agentId: resolvedAgentId
       })
-      applyAiResult(action, response.content, targetBlockId)
+      const appliedBlockId = applyAiResult(action, response.content, targetBlockId)
+      focusAiResult(appliedBlockId)
       const successPayloadSummary = `${basePayloadSummary} retries=${response.meta.retries}`
       pushLog(
         createLogEntry({
@@ -551,7 +567,7 @@ export const App = () => {
           scope: 'ai',
           status: 'success',
           message: `${response.label} 完成`,
-            durationMs: nowMs() - requestStartedAt,
+          durationMs: nowMs() - requestStartedAt,
           payloadSummary: successPayloadSummary
         })
       )
@@ -561,7 +577,7 @@ export const App = () => {
           scope: 'agent',
           status: 'success',
           message: `Agent 执行完成`,
-            durationMs: nowMs() - requestStartedAt,
+          durationMs: nowMs() - requestStartedAt,
           payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${response.meta.retries}`
         })
       )
@@ -592,7 +608,7 @@ export const App = () => {
           scope: 'ai',
           status: 'error',
           message: `AI 失败：${message}`,
-            durationMs: nowMs() - requestStartedAt,
+          durationMs: nowMs() - requestStartedAt,
           payloadSummary: failurePayloadSummary
         })
       )
@@ -602,7 +618,7 @@ export const App = () => {
           scope: 'agent',
           status: 'error',
           message: `Agent 执行失败：${message}`,
-            durationMs: nowMs() - requestStartedAt,
+          durationMs: nowMs() - requestStartedAt,
           payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${retryCount}`
         })
       )
@@ -653,6 +669,15 @@ export const App = () => {
     const basePayloadSummary = `action=${action} replay=true provider=${run.request.providerId || '-'} agent=${run.request.agentId || '-'} chars=${run.request.content.length}`
 
     try {
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'ai',
+          status: 'info',
+          message: `${getAiActionLabel(action)} 重放中`,
+          payloadSummary: basePayloadSummary
+        })
+      )
       const response = await runAiAction({
         action,
         content: run.request.content,
@@ -665,7 +690,8 @@ export const App = () => {
         agentSequenceIds: run.request.agentSequenceIds
       })
 
-      applyAiResult(action, response.content, run.request.targetBlockId)
+      const appliedBlockId = applyAiResult(action, response.content, run.request.targetBlockId)
+      focusAiResult(appliedBlockId)
       const successPayloadSummary = `${basePayloadSummary} retries=${response.meta.retries}`
       pushLog(
         createLogEntry({

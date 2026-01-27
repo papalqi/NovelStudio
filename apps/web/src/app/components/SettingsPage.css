@@ -199,6 +199,49 @@
   gap: var(--space-3);
 }
 
+.settings-page .provider-model-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings-page .provider-action-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.settings-page .provider-status {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.settings-page .provider-status.success {
+  color: var(--color-success);
+}
+
+.settings-page .provider-status.error {
+  color: var(--color-error);
+}
+
+.settings-page .provider-status.loading {
+  color: var(--color-warning);
+}
+
+.settings-page .provider-status.idle {
+  color: var(--color-text-tertiary);
+}
+
+.settings-page .provider-log {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
 .settings-page .settings-add-button {
   margin-top: var(--space-2);
 }
@@ -259,4 +302,3 @@ html[data-theme='dark'] .settings-page-header {
 html[data-theme='dark'] .settings-page .settings-item-card {
   background: var(--color-bg-tertiary);
 }
-

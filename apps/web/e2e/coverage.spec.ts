@@ -402,6 +402,20 @@ test('knowledge base and settings coverage', async ({ page }) => {
   }
 
   await page.getByTestId('knowledge-back').click()
+  await page.route('**/api/ai/models', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ models: ['gpt-4o', 'gpt-4.1-mini'] })
+    })
+  })
+  await page.route('**/api/ai/test', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, model: 'gpt-4o', latencyMs: 15, content: 'pong' })
+    })
+  })
   await page.getByTestId('topbar-settings').click()
   await expect(page.getByRole('heading', { name: '设置' })).toBeVisible()
 
@@ -416,6 +430,16 @@ test('knowledge base and settings coverage', async ({ page }) => {
   await page.getByRole('option', { name: '居中' }).click()
 
   await page.getByTestId('settings-nav-providers').click()
+  const providerCard = page.locator('[data-testid^="settings-provider-card-"]').first()
+  const providerTestId = await providerCard.getAttribute('data-testid')
+  const providerId = providerTestId?.replace('settings-provider-card-', '')
+  if (!providerId) {
+    throw new Error('Provider 卡片缺少 data-testid')
+  }
+  await page.getByTestId(`settings-provider-model-refresh-${providerId}`).click()
+  await expect(page.getByTestId(`settings-provider-model-status-${providerId}`)).toContainText('已加载')
+  await page.getByTestId(`settings-provider-test-${providerId}`).click()
+  await expect(page.getByTestId(`settings-provider-test-status-${providerId}`)).toContainText('通过')
   await page.getByTestId('settings-provider-add').click()
   const providerCards = page.locator('.settings-content .settings-item-card')
   await providerCards.last().getByPlaceholder('Provider 名称').fill('E2E Provider')

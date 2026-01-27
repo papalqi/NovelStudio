@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download } from 'lucide-react'
 import type { Settings, Provider, Agent, AiRequestSettings } from '../../types'
 import { createId } from '../../utils/id'
 import { normalizeAiRequestSettings } from '../../utils/aiRequest'
+import { ProvidersSection } from './ProvidersSection'
 import { Card, Input, Select, Toggle, Button } from './common'
 import './SettingsPage.css'
 
@@ -43,12 +44,12 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
 
   if (!draft) return null
 
-  const updateProvider = (id: string, patch: Partial<Provider>) => {
-    setDraft({
-      ...draft,
-      providers: draft.providers.map((item) => (item.id === id ? { ...item, ...patch } : item))
+  const setProviders = useCallback((updater: (prev: Provider[]) => Provider[]) => {
+    setDraft((prev) => {
+      if (!prev) return prev
+      return { ...prev, providers: updater(prev.providers) }
     })
-  }
+  }, [])
 
   const updateAgent = (id: string, patch: Partial<Agent>) => {
     setDraft({
@@ -174,77 +175,11 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
   )
 
   const renderProvidersSection = () => (
-    <div className="settings-content-inner">
-      <Card header="Provider 列表">
-        <div className="settings-group">
-          {draft.providers.map((provider) => (
-            <div key={provider.id} className="settings-item-card">
-              <div className="settings-item-header">
-                <Input
-                  value={provider.name}
-                  onChange={(e) => updateProvider(provider.id, { name: e.target.value })}
-                  placeholder="Provider 名称"
-                  data-testid={`settings-provider-name-${provider.id}`}
-                />
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      providers: draft.providers.filter((item) => item.id !== provider.id)
-                    })
-                  }
-                  data-testid={`settings-provider-delete-${provider.id}`}
-                >
-                  删除
-                </Button>
-              </div>
-              <div className="settings-item-fields">
-                <Input
-                  value={provider.baseUrl}
-                  onChange={(e) => updateProvider(provider.id, { baseUrl: e.target.value })}
-                  placeholder="https://api.xxx.com/v1"
-                  label="API 地址"
-                  data-testid={`settings-provider-baseurl-${provider.id}`}
-                />
-                <Input
-                  value={provider.token}
-                  onChange={(e) => updateProvider(provider.id, { token: e.target.value })}
-                  placeholder="API Token"
-                  label="Token"
-                  type="password"
-                  data-testid={`settings-provider-token-${provider.id}`}
-                />
-                <Input
-                  value={provider.model}
-                  onChange={(e) => updateProvider(provider.id, { model: e.target.value })}
-                  placeholder="gpt-4"
-                  label="模型"
-                  data-testid={`settings-provider-model-${provider.id}`}
-                />
-              </div>
-            </div>
-          ))}
-          <Button
-            variant="ghost"
-            className="settings-add-button"
-            onClick={() =>
-              setDraft({
-                ...draft,
-                providers: [
-                  ...draft.providers,
-                  { id: createId(), name: '新 Provider', baseUrl: '', token: '', model: '' }
-                ]
-              })
-            }
-            data-testid="settings-provider-add"
-          >
-            + 添加 Provider
-          </Button>
-        </div>
-      </Card>
-    </div>
+    <ProvidersSection
+      providers={draft.providers}
+      onSetProviders={setProviders}
+      syncApiBaseUrl={draft.sync.apiBaseUrl}
+    />
   )
 
   const renderAgentsSection = () => (

@@ -169,12 +169,53 @@ test('right panel AI action returns feedback', async ({ page }) => {
       await page.getByTestId('ai-block-continue').click()
     },
     ui: async () => {
-      await expect(page.getByText('续写 完成')).toBeVisible()
+      await expect(page.getByTestId('ai-status-latest')).toContainText('续写 完成')
     },
     persist: async () => {
       await waitForExplorer(page)
-      await expect(page.getByText('续写 完成')).toHaveCount(0)
+      await expect(page.getByTestId('ai-status-latest')).not.toContainText('续写 完成')
     }
+  })
+})
+
+test('right panel chapter AI action appends result', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 800 })
+  await page.goto('/')
+  await waitForExplorer(page)
+
+  await createVolumeWithFeedback(page)
+
+  const firstVolume = page.locator('[data-testid^="explorer-volume-"]').first()
+  await firstVolume.click({ button: 'right' })
+  await page.getByTestId('context-volume-add-chapter').click()
+
+  const firstChapter = page.locator('[data-testid^="explorer-chapter-"]').first()
+  await firstChapter.click()
+
+  await page.getByTestId('editor-content').click()
+  await page.keyboard.type('用于章节 AI 回归的测试内容。')
+
+  await page.route('**/api/ai/complete', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: 'AI 章节大纲结果' })
+    })
+  })
+
+  await withRealFeedback(page, {
+    api: { url: '/api/ai/complete', method: 'POST' },
+    action: async () => {
+      await page.getByTestId('ai-chapter-outline').click()
+    },
+    ui: async () => {
+      await expect(page.getByTestId('ai-status-latest')).toContainText('章节大纲')
+      await expect(page.getByTestId('editor-content').getByText('AI 章节大纲结果')).toBeVisible()
+    },
+    persist: async () => {
+      await expect(page.getByTestId('editor-content').getByText('AI 章节大纲结果')).toBeVisible()
+    },
+    reload: false
   })
 })
 
