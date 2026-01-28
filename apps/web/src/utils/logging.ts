@@ -1,6 +1,6 @@
 import { createId } from './id'
 
-export type LogScope = 'ai' | 'diff' | 'agent' | 'autosave' | 'conflict' | 'system'
+export type LogScope = 'ai' | 'diff' | 'agent' | 'autosave' | 'conflict' | 'system' | 'knowledge'
 export type LogStatus = 'info' | 'success' | 'error' | 'warn'
 
 export type LogEntry = {

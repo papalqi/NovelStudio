@@ -39,6 +39,14 @@ const DEFAULT_SETTINGS = {
     maxTokens: 2000,
     defaultProviderId: 'provider-papalqi',
     defaultAgentId: 'agent-writer',
+    prompts: {
+      block: {
+        rewrite: '请改写以下内容，保持意思一致但提升文学性。',
+        expand: '请扩写以下内容，补充细节、动作与情绪。',
+        shorten: '请压缩以下内容，保留关键情节。',
+        continue: '请在以下内容后继续写作。'
+      }
+    },
     request: {
       timeoutMs: 20000,
       maxRetries: 2,
@@ -203,7 +211,19 @@ const mergeSettings = (stored) => {
     ui: { ...DEFAULT_SETTINGS.ui, ...(stored?.ui ?? {}) },
     autosave: { ...DEFAULT_SETTINGS.autosave, ...(stored?.autosave ?? {}) },
     export: { ...DEFAULT_SETTINGS.export, ...(stored?.export ?? {}) },
-    ai: { ...DEFAULT_SETTINGS.ai, ...(stored?.ai ?? {}) },
+    ai: {
+      ...DEFAULT_SETTINGS.ai,
+      ...(stored?.ai ?? {}),
+      request: { ...DEFAULT_SETTINGS.ai.request, ...(stored?.ai?.request ?? {}) },
+      prompts: {
+        ...DEFAULT_SETTINGS.ai.prompts,
+        ...(stored?.ai?.prompts ?? {}),
+        block: {
+          ...DEFAULT_SETTINGS.ai.prompts.block,
+          ...(stored?.ai?.prompts?.block ?? {})
+        }
+      }
+    },
     providers: stored?.providers?.length ? stored.providers : DEFAULT_SETTINGS.providers,
     agents: stored?.agents?.length ? stored.agents : DEFAULT_SETTINGS.agents,
     profile: { ...DEFAULT_SETTINGS.profile, ...(stored?.profile ?? {}) }

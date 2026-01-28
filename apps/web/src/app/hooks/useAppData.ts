@@ -23,6 +23,7 @@ import {
 import { resolveApiBaseUrl } from '../../api/client'
 import { createId } from '../../utils/id'
 import { normalizeAiRequestSettings } from '../../utils/aiRequest'
+import { DEFAULT_BLOCK_AI_PROMPTS } from '../../ai/aiPrompts'
 
 const CACHE_KEY = 'novelstudio.cache.v1'
 
@@ -49,7 +50,10 @@ const normalizeSettings = (settings: Settings): Settings => ({
   ...settings,
   ai: {
     ...settings.ai,
-    request: normalizeAiRequestSettings(settings.ai?.request)
+    request: normalizeAiRequestSettings(settings.ai?.request),
+    prompts: {
+      block: { ...DEFAULT_BLOCK_AI_PROMPTS, ...(settings.ai?.prompts?.block ?? {}) }
+    }
   }
 })
 

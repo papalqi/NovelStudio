@@ -52,6 +52,17 @@ export type AiRequestSettings = {
   rateLimitPerMinute: number
 }
 
+export type BlockAiPromptSettings = {
+  rewrite: string
+  expand: string
+  shorten: string
+  continue: string
+}
+
+export type AiPromptSettings = {
+  block: BlockAiPromptSettings
+}
+
 export type Settings = {
   sync: { apiBaseUrl: string }
   ui: { theme: 'light' | 'dark'; fontFamily: string; editorWidth: 'full' | 'center' }
@@ -63,6 +74,7 @@ export type Settings = {
     defaultProviderId: string
     defaultAgentId: string
     request: AiRequestSettings
+    prompts: AiPromptSettings
   }
   providers: Provider[]
   agents: Agent[]

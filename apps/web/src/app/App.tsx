@@ -18,7 +18,7 @@ import { createId } from '../utils/id'
 import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
 import { nowMs } from '../utils/time'
 import { createLogEntry, type LogEntry } from '../utils/logging'
-import { loginUser, registerUser, fetchAuthProfile, logoutUser, clearUserWorkspace } from '../api'
+import { loginUser, registerUser, fetchAuthProfile, logoutUser, clearUserWorkspace, runAiCompletion } from '../api'
 import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note } from '../types'
 import {
   getAuthToken,
@@ -28,7 +28,15 @@ import {
   setStoredAuthUser,
   clearStoredAuthUser
 } from '../utils/auth'
-import { buildNoteSnapshot, buildReferenceHeader, parseReferenceId } from './utils/knowledge'
+import { validateJsonSchema } from '../utils/jsonSchema'
+import {
+  buildNoteSnapshot,
+  buildReferenceHeader,
+  parseReferenceId,
+  NOTE_AI_SCHEMAS,
+  NOTE_FIELD_DEFS,
+  NOTE_TYPE_LABELS
+} from './utils/knowledge'
 import './App.css'
 
 type AppPage = 'editor' | 'settings' | 'knowledge'
@@ -117,6 +125,10 @@ export const App = () => {
   const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
+
+  const pushLog = useCallback((entry: LogEntry) => {
+    setAiLogs((prev) => [entry, ...prev].slice(0, 12))
+  }, [])
 
   const switchingRef = useRef(false)
 
@@ -245,13 +257,75 @@ export const App = () => {
     await refresh()
   }, [refresh, settings?.sync.apiBaseUrl])
 
-  const handleSaveNote = (note: Partial<Note>) => {
-    upsertNoteItem(note)
-  }
+  const handleSaveNote = useCallback(
+    async (note: Partial<Note>) => {
+      const requestId = createId()
+      const startedAt = nowMs()
+      const actionLabel = note.id ? '更新资料卡' : '创建资料卡'
+      try {
+        const saved = await upsertNoteItem(note)
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'success',
+            message: `${actionLabel}成功`,
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `note=${saved?.id ?? note.id ?? 'new'} type=${note.type ?? '-'}`
+          })
+        )
+        return saved
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : '资料卡保存失败'
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'error',
+            message: `${actionLabel}失败：${message}`,
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `note=${note.id ?? 'new'} type=${note.type ?? '-'}`
+          })
+        )
+        throw error
+      }
+    },
+    [pushLog, upsertNoteItem]
+  )
 
-  const handleDeleteNote = (noteId: string) => {
-    removeNoteItem(noteId)
-  }
+  const handleDeleteNote = useCallback(
+    async (noteId: string) => {
+      const requestId = createId()
+      const startedAt = nowMs()
+      try {
+        await removeNoteItem(noteId)
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'success',
+            message: '删除资料卡成功',
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `note=${noteId}`
+          })
+        )
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : '删除资料卡失败'
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'error',
+            message: `删除资料卡失败：${message}`,
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `note=${noteId}`
+          })
+        )
+        throw error
+      }
+    },
+    [pushLog, removeNoteItem]
+  )
 
   const handleInsertNote = (note: Note) => {
     if (!activeChapter) {
@@ -339,9 +413,104 @@ export const App = () => {
     )
   }
 
-  const pushLog = useCallback((entry: LogEntry) => {
-    setAiLogs((prev) => [entry, ...prev].slice(0, 12))
-  }, [])
+  const handleGenerateNote = useCallback(
+    async (payload: { type: Note['type']; title: string; content?: Record<string, unknown> }) => {
+      if (!settings) throw new Error('设置未加载')
+      if (payload.type !== 'character' && payload.type !== 'location') {
+        throw new Error('仅支持角色/地点卡片生成')
+      }
+      const provider =
+        settings.providers.find((item) => item.id === resolvedProviderId) ?? settings.providers[0]
+      if (!provider) {
+        throw new Error('未配置 Provider')
+      }
+      const agent = settings.agents.find((item) => item.id === resolvedAgentId) ?? settings.agents[0]
+      const schema = NOTE_AI_SCHEMAS[payload.type]
+      const schemaText = JSON.stringify(schema, null, 2)
+      const typeLabel = NOTE_TYPE_LABELS[payload.type]
+      const fieldLabels = NOTE_FIELD_DEFS[payload.type].map((field) => `${field.key}(${field.label})`).join('、')
+      const existingEntries = Object.entries(payload.content ?? {}).filter(
+        ([, value]) => typeof value === 'string' && value.trim().length > 0
+      )
+      const existingText =
+        existingEntries.length > 0 ? `\n\n已有信息：\n${JSON.stringify(Object.fromEntries(existingEntries), null, 2)}` : ''
+
+      const systemPrompt = `${agent?.systemPrompt ?? '你是网络小说写作助手。'}\n\n输出必须严格为 JSON，且符合以下 JSON Schema：\n${schemaText}\n只输出 JSON，不要添加解释。`
+      const userPrompt = `请为${typeLabel}「${payload.title}」生成资料卡字段。字段包含：${fieldLabels}。${existingText}\n\n要求：语言简洁、有画面感，信息可信。`
+
+      const requestId = createId()
+      const startedAt = nowMs()
+      pushLog(
+        createLogEntry({
+          requestId,
+          scope: 'knowledge',
+          status: 'info',
+          message: `AI 生成${typeLabel}资料卡中`,
+          payloadSummary: `type=${payload.type} title=${payload.title} provider=${provider.id} agent=${agent?.id ?? '-'}`
+        })
+      )
+
+      try {
+        const response = await runAiCompletion(
+          {
+            provider: {
+              baseUrl: provider.baseUrl,
+              token: provider.token,
+              model: provider.model
+            },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: settings.ai.temperature,
+            maxTokens: settings.ai.maxTokens
+          },
+          settings.sync.apiBaseUrl,
+          settings.ai.request
+        )
+
+        const parsed = JSON.parse(response.content) as Record<string, unknown>
+        const validation = validateJsonSchema(schema, parsed)
+        if (!validation.valid) {
+          throw new Error(validation.errors[0] ?? 'AI 输出未通过 Schema 校验')
+        }
+        const normalized: Record<string, string> = {}
+        NOTE_FIELD_DEFS[payload.type].forEach((field) => {
+          const value = parsed[field.key]
+          if (typeof value === 'string') {
+            normalized[field.key] = value.trim()
+          } else if (value !== undefined && value !== null) {
+            normalized[field.key] = String(value)
+          }
+        })
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'success',
+            message: `AI 生成${typeLabel}资料卡完成`,
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `type=${payload.type} title=${payload.title} retries=${response.meta.retries}`
+          })
+        )
+        return normalized
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'AI 生成失败'
+        pushLog(
+          createLogEntry({
+            requestId,
+            scope: 'knowledge',
+            status: 'error',
+            message: `AI 生成${typeLabel}资料卡失败：${message}`,
+            durationMs: nowMs() - startedAt,
+            payloadSummary: `type=${payload.type} title=${payload.title}`
+          })
+        )
+        throw error
+      }
+    },
+    [pushLog, resolvedAgentId, resolvedProviderId, settings]
+  )
 
   const { conflictState, conflictRef, openConflictPrompt, handleConflictOverwrite, handleConflictSaveCopy, handleConflictReload } =
     useConflictHandler({
@@ -624,6 +793,7 @@ export const App = () => {
               diffVersion={diffVersion}
               onExitDiff={handleExitDiff}
               onRunAiAction={handleRunAiAction}
+              selectedBlock={selectedBlock}
               onTitleChange={(title) => handleChapterMetaUpdate({ title })}
               onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
               onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}
@@ -667,7 +837,6 @@ export const App = () => {
 
             <RightPanel
               chapter={activeChapter}
-              selectedBlock={selectedBlock}
               providers={settings?.providers ?? []}
               agents={settings?.agents ?? []}
               activeProviderId={resolvedProviderId}
@@ -790,6 +959,7 @@ export const App = () => {
           onSaveNote={handleSaveNote}
           onDeleteNote={handleDeleteNote}
           onInsertNote={handleInsertNote}
+          onGenerateNote={handleGenerateNote}
           onRefreshReferences={handleRefreshReferences}
           canRefreshReferences={Boolean(activeChapter)}
           onBack={() => setCurrentPage('editor')}

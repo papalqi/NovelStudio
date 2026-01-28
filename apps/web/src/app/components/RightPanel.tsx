@@ -1,26 +1,13 @@
 import { useState } from 'react'
-import {
-  Edit3,
-  Maximize2,
-  Minimize2,
-  ArrowRight,
-  List,
-  CheckCircle,
-  Users,
-  Sparkles,
-  Globe,
-  RefreshCw
-} from 'lucide-react'
-import type { Chapter, Comment, Provider, Agent, Block, AiRunRecord, ChapterVersion } from '../../types'
+import { List, CheckCircle, Users, Sparkles, Globe, RefreshCw } from 'lucide-react'
+import type { Chapter, Comment, Provider, Agent, AiRunRecord, ChapterVersion } from '../../types'
 import type { AiAction } from '../../ai/aiService'
-import { getPlainTextFromBlock } from '../../utils/text'
 import { formatLogEntry, type LogEntry } from '../../utils/logging'
-import { Accordion, Select, Button, Card } from './common'
+import { Accordion, Select, Button } from './common'
 import './RightPanel.css'
 
 type RightPanelProps = {
   chapter: Chapter | null
-  selectedBlock: Block | null
   providers: Provider[]
   agents: Agent[]
   activeProviderId: string
@@ -41,13 +28,6 @@ type RightPanelProps = {
   authorName: string
 }
 
-const AI_BLOCK_ACTIONS = [
-  { action: 'rewrite' as AiAction, label: '改写', icon: Edit3 },
-  { action: 'expand' as AiAction, label: '扩写', icon: Maximize2 },
-  { action: 'shorten' as AiAction, label: '缩写', icon: Minimize2 },
-  { action: 'continue' as AiAction, label: '续写', icon: ArrowRight }
-]
-
 const AI_CHAPTER_ACTIONS = [
   { action: 'outline' as AiAction, label: '章节大纲', icon: List },
   { action: 'chapterCheck' as AiAction, label: '连贯性检查', icon: CheckCircle },
@@ -58,7 +38,6 @@ const AI_CHAPTER_ACTIONS = [
 
 export const RightPanel = ({
   chapter,
-  selectedBlock,
   providers,
   agents,
   activeProviderId,
@@ -105,30 +84,6 @@ export const RightPanel = ({
             onChange={onAgentChange}
             testId="rightpanel-agent"
           />
-
-          <Card className="block-info-card">
-            <div className="block-label">当前块</div>
-            <div className="block-value">
-              {selectedBlock?.type ?? '未选择'} · {getPlainTextFromBlock(selectedBlock).slice(0, 20)}
-            </div>
-          </Card>
-
-          <div className="ai-section-title">块级 AI</div>
-          <div className="ai-action-grid">
-            {AI_BLOCK_ACTIONS.map(({ action, label, icon: Icon }) => (
-              <button
-                key={action}
-                className="ai-action-button"
-                onClick={() => onRunAiAction(action)}
-                disabled={actionDisabled}
-                title={actionDisabledHint}
-                data-testid={`ai-block-${action}`}
-              >
-                <Icon size={16} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
 
           <div className="ai-section-title">章节 AI</div>
           <div className="ai-action-grid">

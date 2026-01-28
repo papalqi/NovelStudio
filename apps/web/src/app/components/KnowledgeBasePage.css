@@ -137,6 +137,25 @@
   color: var(--color-text-tertiary);
 }
 
+.knowledge-alert {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.knowledge-alert.success {
+  border-color: var(--color-success);
+  color: var(--color-text-primary);
+}
+
+.knowledge-alert.error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
 .knowledge-list {
   display: flex;
   flex-direction: column;
@@ -172,6 +191,47 @@
   margin-top: var(--space-1);
 }
 
+.knowledge-card-body {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.knowledge-card-description {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.knowledge-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.knowledge-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+}
+
+.knowledge-card-field-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.knowledge-card-field-value {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
 .knowledge-edit-form {
   display: flex;
   flex-direction: column;
@@ -189,6 +249,34 @@
   color: var(--color-text-primary);
 }
 
+.knowledge-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.knowledge-edit-grid .textarea-wrapper,
+.knowledge-edit-grid .input-wrapper {
+  grid-column: span 2;
+}
+
+.knowledge-ai-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.knowledge-ai-status.error {
+  color: var(--color-error);
+}
+
+.knowledge-edit-status {
+  font-size: 12px;
+  color: var(--color-error);
+}
+
 .knowledge-edit-actions {
   display: flex;
   justify-content: flex-end;
@@ -197,6 +285,14 @@
 
 @media (max-width: 960px) {
   .knowledge-page-body {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-edit-grid {
     grid-template-columns: 1fr;
   }
 }

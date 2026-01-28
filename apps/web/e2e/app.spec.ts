@@ -265,6 +265,9 @@ test('AI settings persist after save', async ({ page }) => {
   const rateLimitValue = Number(await rateLimitInput.inputValue() || '0') + 10
   await rateLimitInput.fill(String(rateLimitValue))
 
+  const rewritePrompt = `改写提示-${Date.now()}`
+  await page.getByTestId('settings-ai-block-prompt-rewrite').fill(rewritePrompt)
+
   await withRealFeedback(page, {
     api: { url: '/api/settings', method: 'PUT' },
     action: async () => {
@@ -289,6 +292,7 @@ test('AI settings persist after save', async ({ page }) => {
       await expect(page.getByTestId('settings-ai-retry-delay')).toHaveValue(String(retryDelayValue))
       await expect(page.getByTestId('settings-ai-max-concurrency')).toHaveValue(String(maxConcurrencyValue))
       await expect(page.getByTestId('settings-ai-rate-limit')).toHaveValue(String(rateLimitValue))
+      await expect(page.getByTestId('settings-ai-block-prompt-rewrite')).toHaveValue(rewritePrompt)
     }
   })
 })

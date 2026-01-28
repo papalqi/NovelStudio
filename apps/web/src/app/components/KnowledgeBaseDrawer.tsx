@@ -10,8 +10,8 @@ type KnowledgeBaseDrawerProps = {
   open: boolean
   onClose: () => void
   notes: Note[]
-  onSaveNote: (note: Partial<Note>) => void
-  onDeleteNote: (noteId: string) => void
+  onSaveNote: (note: Partial<Note>) => Promise<Note | void>
+  onDeleteNote: (noteId: string) => Promise<void>
 }
 
 const NOTE_TYPES: { value: NoteType; label: string; icon: React.ReactNode }[] = [
@@ -32,6 +32,8 @@ export const KnowledgeBaseDrawer = ({
   const [search, setSearch] = useState('')
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [newNoteTitle, setNewNoteTitle] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
+  const [saving, setSaving] = useState(false)
   
   const filteredNotes = useMemo(() => {
     return notes
@@ -39,16 +41,43 @@ export const KnowledgeBaseDrawer = ({
       .filter(note => note.title.toLowerCase().includes(search.toLowerCase()))
   }, [notes, activeType, search])
   
-  const handleCreateNote = () => {
-    if (!newNoteTitle.trim()) return
-    onSaveNote({
-      type: activeType,
-      title: newNoteTitle.trim(),
-      content: {}
-    })
-    setNewNoteTitle('')
+  const handleCreateNote = async () => {
+    if (!newNoteTitle.trim()) {
+      setStatusMessage('请输入条目标题')
+      return
+    }
+    setSaving(true)
+    setStatusMessage('正在创建...')
+    try {
+      await onSaveNote({
+        type: activeType,
+        title: newNoteTitle.trim(),
+        content: {}
+      })
+      setNewNoteTitle('')
+      setStatusMessage('资料卡已创建')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '创建失败'
+      setStatusMessage(message)
+    } finally {
+      setSaving(false)
+    }
   }
   
+  const handleDeleteNote = async (noteId: string) => {
+    setSaving(true)
+    setStatusMessage('正在删除...')
+    try {
+      await onDeleteNote(noteId)
+      setStatusMessage('资料卡已删除')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '删除失败'
+      setStatusMessage(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (!open) return null
   
   return (
@@ -98,11 +127,19 @@ export const KnowledgeBaseDrawer = ({
                 onKeyDown={e => e.key === 'Enter' && handleCreateNote()}
                 data-testid="knowledge-new-title"
               />
-              <Button variant="primary" size="sm" onClick={handleCreateNote} data-testid="knowledge-add">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleCreateNote}
+                loading={saving}
+                data-testid="knowledge-add"
+              >
                 <Plus size={16} />
               </Button>
             </div>
           </div>
+
+          {statusMessage && <div className="knowledge-tip">{statusMessage}</div>}
           
           {/* 条目列表 */}
           <div className="knowledge-list">
@@ -127,7 +164,7 @@ export const KnowledgeBaseDrawer = ({
                       <Button
                         variant="icon"
                         size="sm"
-                        onClick={() => onDeleteNote(note.id)}
+                        onClick={() => handleDeleteNote(note.id)}
                         data-testid={`knowledge-delete-${note.id}`}
                       >
                         <Trash2 size={14} />

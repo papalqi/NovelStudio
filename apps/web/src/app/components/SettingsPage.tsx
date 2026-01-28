@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download, Shield } from 'lucide-react'
-import type { Settings, Provider, Agent, AiRequestSettings } from '../../types'
+import type { Settings, Provider, Agent, AiRequestSettings, BlockAiPromptSettings } from '../../types'
 import type { AuthUser } from '../../utils/auth'
 import { createId } from '../../utils/id'
 import { normalizeAiRequestSettings } from '../../utils/aiRequest'
+import { DEFAULT_BLOCK_AI_PROMPTS } from '../../ai/aiPrompts'
 import { ProvidersSection } from './ProvidersSection'
-import { Card, Input, Select, Toggle, Button, Modal } from './common'
+import { Card, Input, Textarea, Select, Toggle, Button, Modal } from './common'
 import './SettingsPage.css'
 
 type SettingsPageProps = {
@@ -41,7 +42,21 @@ const NAV_ITEMS: { id: SettingsCategory; label: string; icon: typeof User }[] = 
 ]
 
 export const SettingsPage = ({ settings, onBack, onSave, authUser, onLogout, onClearWorkspace }: SettingsPageProps) => {
-  const [draft, setDraft] = useState<Settings | null>(settings)
+  const normalizeDraft = useCallback(
+    (current: Settings) => ({
+      ...current,
+      ai: {
+        ...current.ai,
+        request: normalizeAiRequestSettings(current.ai.request),
+        prompts: {
+          block: { ...DEFAULT_BLOCK_AI_PROMPTS, ...(current.ai.prompts?.block ?? {}) }
+        }
+      }
+    }),
+    []
+  )
+
+  const [draft, setDraft] = useState<Settings | null>(() => (settings ? normalizeDraft(settings) : null))
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('profile')
   const [clearModalOpen, setClearModalOpen] = useState(false)
   const [clearStatus, setClearStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -50,14 +65,8 @@ export const SettingsPage = ({ settings, onBack, onSave, authUser, onLogout, onC
   useEffect(() => {
     if (!settings) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync incoming settings into editable draft
-    setDraft({
-      ...settings,
-      ai: {
-        ...settings.ai,
-        request: normalizeAiRequestSettings(settings.ai.request)
-      }
-    })
-  }, [settings])
+    setDraft(normalizeDraft(settings))
+  }, [normalizeDraft, settings])
 
   if (!draft) return null
 
@@ -182,6 +191,21 @@ export const SettingsPage = ({ settings, onBack, onSave, authUser, onLogout, onC
         request: {
           ...draft.ai.request,
           ...patch
+        }
+      }
+    })
+  }
+
+  const updateBlockPrompt = (key: keyof BlockAiPromptSettings, value: string) => {
+    setDraft({
+      ...draft,
+      ai: {
+        ...draft.ai,
+        prompts: {
+          block: {
+            ...draft.ai.prompts.block,
+            [key]: value
+          }
         }
       }
     })
@@ -537,6 +561,27 @@ export const SettingsPage = ({ settings, onBack, onSave, authUser, onLogout, onC
               />
             </div>
           </div>
+        </div>
+      </Card>
+      <Card header="块级提示词">
+        <div className="settings-group">
+          {([
+            { key: 'rewrite', label: '改写提示词' },
+            { key: 'expand', label: '扩写提示词' },
+            { key: 'shorten', label: '缩写提示词' },
+            { key: 'continue', label: '续写提示词' }
+          ] as Array<{ key: keyof BlockAiPromptSettings; label: string }>).map(({ key, label }) => (
+            <Textarea
+              key={key}
+              label={label}
+              value={draft.ai.prompts.block[key]}
+              onChange={(e) => updateBlockPrompt(key, e.target.value)}
+              placeholder={DEFAULT_BLOCK_AI_PROMPTS[key]}
+              rows={3}
+              data-testid={`settings-ai-block-prompt-${key}`}
+            />
+          ))}
+          <div className="settings-inline-note">留空将使用默认提示词。</div>
         </div>
       </Card>
     </div>

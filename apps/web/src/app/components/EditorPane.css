@@ -146,6 +146,97 @@
 }
 
 /* ============================================
+ * Block AI Panel
+ * ============================================ */
+.block-ai-panel {
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--color-bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.block-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.block-ai-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.block-ai-toggle {
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.block-ai-toggle:hover {
+  color: var(--color-accent);
+}
+
+.block-ai-meta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.block-ai-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.block-ai-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 12px;
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.block-ai-action:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.block-ai-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.block-ai-status {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.block-ai-status.error {
+  color: var(--color-error);
+}
+
+@media (max-width: 960px) {
+  .block-ai-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ============================================
  * Side Menu AI
  * ============================================ */
 .bn-side-menu {

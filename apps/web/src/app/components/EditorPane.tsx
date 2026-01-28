@@ -4,10 +4,10 @@ import type { BlockNoteEditor } from '@blocknote/core'
 import { SideMenuExtension } from '@blocknote/core/extensions'
 import { AddBlockButton, DragHandleButton, SideMenu, useComponentsContext, useExtensionState } from '@blocknote/react'
 import { ArrowRight, Edit3, Maximize2, Minimize2, Sparkles } from 'lucide-react'
-import type { Chapter, ChapterStatus, ChapterVersion } from '../../types'
+import type { Chapter, ChapterStatus, ChapterVersion, Block } from '../../types'
 import type { AiAction } from '../../ai/aiService'
 import { diffLines } from '../../utils/diff'
-import { getPlainTextFromDoc } from '../../utils/text'
+import { getPlainTextFromBlock, getPlainTextFromDoc } from '../../utils/text'
 import './EditorPane.css'
 
 const statusOptions: { value: ChapterStatus; label: string }[] = [
@@ -114,6 +114,7 @@ type EditorPaneProps = {
   diffVersion?: ChapterVersion | null
   onExitDiff?: () => void
   onRunAiAction: (action: AiAction, targetBlockId?: string) => Promise<boolean>
+  selectedBlock: Block | null
   onTitleChange: (title: string) => void
   onStatusChange: (status: ChapterStatus) => void
   onTagsChange: (tags: string[]) => void
@@ -130,6 +131,7 @@ export const EditorPane = ({
   diffVersion,
   onExitDiff,
   onRunAiAction,
+  selectedBlock,
   onTitleChange,
   onStatusChange,
   onTagsChange,
@@ -139,6 +141,24 @@ export const EditorPane = ({
   onContentChange,
   editorWidth
 }: EditorPaneProps) => {
+  const [blockAiOpen, setBlockAiOpen] = useState(true)
+  const [blockAiStatus, setBlockAiStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [blockAiAction, setBlockAiAction] = useState<AiAction | null>(null)
+
+  useEffect(() => {
+    setBlockAiStatus('idle')
+    setBlockAiAction(null)
+  }, [selectedBlock?.id])
+
+  const diffData = useMemo(() => {
+    if (!diffVersion || !chapter) return null
+    const beforeText = getPlainTextFromDoc(diffVersion.snapshot?.content ?? [])
+    const afterText = getPlainTextFromDoc(chapter.content ?? [])
+    const beforeLines = beforeText.split(/\r?\n/)
+    const afterLines = afterText.split(/\r?\n/)
+    return diffLines(beforeLines, afterLines)
+  }, [diffVersion, chapter])
+
   if (!chapter) {
     return (
       <section className="editor-area empty">
@@ -146,15 +166,6 @@ export const EditorPane = ({
       </section>
     )
   }
-
-  const diffData = useMemo(() => {
-    if (!diffVersion) return null
-    const beforeText = getPlainTextFromDoc(diffVersion.snapshot?.content ?? [])
-    const afterText = getPlainTextFromDoc(chapter.content ?? [])
-    const beforeLines = beforeText.split(/\r?\n/)
-    const afterLines = afterText.split(/\r?\n/)
-    return diffLines(beforeLines, afterLines)
-  }, [diffVersion, chapter])
 
   if (diffVersion && diffData) {
     return (
@@ -216,6 +227,26 @@ export const EditorPane = ({
     ? Math.min(100, Math.round((chapter.wordCount / chapter.targetWordCount) * 100))
     : 0
 
+  const blockPreview = selectedBlock ? getPlainTextFromBlock(selectedBlock).slice(0, 48) : ''
+  const blockLabel = selectedBlock ? `${selectedBlock.type ?? '块'} · ${blockPreview || '空内容'}` : '未选择'
+  const blockActionDisabled = !chapter
+  const blockStatusLabel = blockAiAction
+    ? `${BLOCK_AI_ACTIONS.find((item) => item.action === blockAiAction)?.label ?? 'AI'}`
+    : 'AI'
+
+  const handleBlockAiAction = async (action: AiAction) => {
+    setBlockAiOpen(true)
+    setBlockAiStatus('loading')
+    setBlockAiAction(action)
+    const success = await onRunAiAction(action, selectedBlock?.id)
+    if (success) {
+      setBlockAiStatus('idle')
+      setBlockAiAction(null)
+      return
+    }
+    setBlockAiStatus('error')
+  }
+
   return (
     <section className="editor-area">
       <div className="editor-toolbar">
@@ -272,6 +303,46 @@ export const EditorPane = ({
         </div>
       </div>
       <div className={`editor-surface ${editorWidth === 'center' ? 'center' : ''}`} data-testid="editor-content">
+        <div className="block-ai-panel" data-testid="block-ai-panel">
+          <div className="block-ai-header">
+            <div className="block-ai-title">块级 AI</div>
+            <button
+              type="button"
+              className="block-ai-toggle"
+              onClick={() => setBlockAiOpen((prev) => !prev)}
+              data-testid="block-ai-toggle"
+            >
+              {blockAiOpen ? '收起' : '展开'}
+            </button>
+          </div>
+          {blockAiOpen && (
+            <>
+              <div className="block-ai-meta">当前块：{blockLabel}</div>
+              <div className="block-ai-actions">
+                {BLOCK_AI_ACTIONS.map(({ action, label, icon: Icon }) => (
+                  <button
+                    key={action}
+                    type="button"
+                    className="block-ai-action"
+                    onClick={() => handleBlockAiAction(action)}
+                    disabled={blockActionDisabled || blockAiStatus === 'loading'}
+                    data-testid={`ai-block-${action}`}
+                  >
+                    <Icon size={14} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+              {blockAiStatus !== 'idle' && (
+                <div className={`block-ai-status ${blockAiStatus}`}>
+                  {blockAiStatus === 'loading'
+                    ? `${blockStatusLabel} 处理中...`
+                    : `${blockStatusLabel} 失败，请重试`}
+                </div>
+              )}
+            </>
+          )}
+        </div>
         <BlockNoteView
           editor={editor}
           onChange={onContentChange}

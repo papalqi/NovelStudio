@@ -1,6 +1,7 @@
-import type { Agent, Provider, Settings } from '../types'
+import type { Agent, Provider, Settings, BlockAiPromptSettings } from '../types'
 import { runAiCompletion } from '../api'
 import { validateJsonSchema, type JsonSchema } from '../utils/jsonSchema'
+import { DEFAULT_BLOCK_AI_PROMPTS } from './aiPrompts'
 
 export type AiAction =
   | 'rewrite'
@@ -58,30 +59,36 @@ const resolveAgentSequence = (
   return fallbackAgent ? [fallbackAgent] : []
 }
 
+const isBlockAction = (action: AiAction) =>
+  action === 'rewrite' || action === 'expand' || action === 'shorten' || action === 'continue'
+
 export const buildPrompt = (
   action: AiAction,
   content: string,
   context: string,
   agent?: Agent,
   schemaText?: string,
-  validationHint?: string
+  validationHint?: string,
+  promptOverrides?: Partial<BlockAiPromptSettings>
 ) => {
   const schemaInstruction = schemaText?.trim()
     ? `\n\n输出必须严格为 JSON，且符合以下 JSON Schema：\n${schemaText}\n只输出 JSON，不要添加解释。`
     : ''
   const validationInstruction = validationHint ? `\n\n${validationHint}` : ''
   const system = `${agent?.systemPrompt ?? '你是网络小说写作助手。'}${schemaInstruction}${validationInstruction}`
-  const instruction = {
-    rewrite: '请改写以下内容，保持意思一致但提升文学性。',
-    expand: '请扩写以下内容，补充细节、动作与情绪。',
-    shorten: '请压缩以下内容，保留关键情节。',
-    continue: '请在以下内容后继续写作。',
+  const baseInstruction: Record<AiAction, string> = {
+    rewrite: DEFAULT_BLOCK_AI_PROMPTS.rewrite,
+    expand: DEFAULT_BLOCK_AI_PROMPTS.expand,
+    shorten: DEFAULT_BLOCK_AI_PROMPTS.shorten,
+    continue: DEFAULT_BLOCK_AI_PROMPTS.continue,
     outline: '请根据以下章节内容生成结构化大纲（分镜、节奏、冲突）。',
     chapterCheck: '请检查以下章节的连贯性并给出修改建议。',
     characterCheck: '请检查以下章节中的人物一致性，并指出矛盾点。',
     styleTune: '请优化以下内容的语言风格，使其更符合网络小说叙述。',
     worldbuilding: '请基于以下内容扩展世界观设定。'
-  }[action]
+  }
+  const override = isBlockAction(action) ? promptOverrides?.[action] : undefined
+  const instruction = override?.trim() ? override.trim() : baseInstruction[action]
 
   const user = [instruction, '\n\n上下文：', context, '\n\n正文：', content].join('')
   return [{ role: 'system', content: system }, { role: 'user', content: user }]
@@ -130,7 +137,15 @@ export const runAiAction = async (params: {
       const validationHint =
         schemaAttempt > 1 && schemaText ? '上次输出未通过校验，请严格输出符合 Schema 的 JSON。' : undefined
       const stepProvider = params.providers.find((item) => item.id === agent.providerId) ?? provider
-      const messages = buildPrompt(params.action, currentContent, params.context, agent, schemaText, validationHint)
+      const messages = buildPrompt(
+        params.action,
+        currentContent,
+        params.context,
+        agent,
+        schemaText,
+        validationHint,
+        params.settings.ai.prompts?.block
+      )
       const response = await runAiCompletion(
         {
           provider: {

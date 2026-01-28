@@ -10,6 +10,8 @@
 - [x] BlockNote 侧边块菜单改造（插入 AI 按钮）
 - [x] 块级选中范围 API 抽象（文本/多块）
 - [x] 块级 AI 操作结果写回并保留历史（AI 日志）
+- [x] 块内 AI 操作入口（移除右侧块级入口）
+- [x] 块级 AI 动作提示词可配置
 
 ## AI Provider
 - [x] Provider schema 校验（URL/token/model）
@@ -41,6 +43,8 @@
 - [x] 世界观条目与引用
 - [x] 章节引用设定片段
 - [x] 资料库独立页面与引用插入
+- [x] 资料库新建失败原因定位 + 交互补全（loading/error/log）
+- [x] 角色/地点卡片式展示与 AI 生成填写
 
 ## 导出与分享
 - [x] Markdown/HTML/TXT 导出
