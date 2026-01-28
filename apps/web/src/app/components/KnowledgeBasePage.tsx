@@ -313,7 +313,8 @@ export const KnowledgeBasePage = ({
             )}
             <div className="knowledge-edit-grid">
               {NOTE_FIELD_DEFS[editingNote.type].map((field) => {
-                const value = typeof editingNote.content?.[field.key] === 'string' ? editingNote.content[field.key] : ''
+                const rawValue = editingNote.content?.[field.key]
+                const value = typeof rawValue === 'string' ? rawValue : ''
                 const update = (nextValue: string) =>
                   setEditingNote({
                     ...editingNote,

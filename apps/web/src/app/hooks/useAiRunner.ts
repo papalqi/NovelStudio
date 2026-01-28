@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { BlockNoteEditor } from '@blocknote/core'
-import type { Block, Chapter, Settings, AiRunRecord } from '../../types'
+import type { Block, Chapter, Settings, AiRunRecord, AiRunRequest } from '../../types'
 import { createAiRun, listAiRuns } from '../../api'
 import { runAiAction, getAiActionLabel, type AiAction } from '../../ai/aiService'
 import { createId } from '../../utils/id'
@@ -29,7 +29,6 @@ type UseAiRunnerArgs = {
   editor: BlockNoteEditor
   settings: Settings | null
   activeChapter: Chapter | null
-  selectedBlock: Block | null
   resolvedChapterId: string
   resolvedProviderId: string
   resolvedAgentId: string
@@ -40,7 +39,6 @@ export const useAiRunner = ({
   editor,
   settings,
   activeChapter,
-  selectedBlock,
   resolvedChapterId,
   resolvedProviderId,
   resolvedAgentId,
@@ -61,8 +59,8 @@ export const useAiRunner = ({
     (action: AiAction, resultContent: string, targetBlockId?: string): string | null => {
       if (isBlockAction(action)) {
         const fallbackBlock = editor.getTextCursorPosition().block as Block
-        const blockId = targetBlockId ?? selectedBlock?.id ?? fallbackBlock?.id
-        if (blockId) {
+        const blockId = targetBlockId ?? fallbackBlock?.id
+        if (typeof blockId === 'string') {
           editor.updateBlock(blockId, { content: resultContent })
           return blockId
         }
@@ -78,10 +76,14 @@ export const useAiRunner = ({
         editor.insertBlocks([newBlock], referenceId, 'after')
         return newBlockId
       }
-      editor.replaceBlocks(currentDoc, [newBlock])
+      const blockIds = currentDoc.map((block) => block.id).filter((id): id is string => typeof id === 'string')
+      if (blockIds.length > 0) {
+        editor.replaceBlocks(blockIds, [newBlock])
+        return newBlockId
+      }
       return newBlockId
     },
-    [editor, selectedBlock]
+    [editor]
   )
 
   const persistAiRun = useCallback(
@@ -142,10 +144,10 @@ export const useAiRunner = ({
         return false
       }
       const currentDoc = editor.document as Block[]
-      const scope = isBlockAction(action) ? 'block' : 'chapter'
+      const scope: AiRunRequest['scope'] = isBlockAction(action) ? 'block' : 'chapter'
       const blockFromId = requestedBlockId ? (editor.getBlock(requestedBlockId) as Block | undefined) : undefined
       const targetBlock =
-        scope === 'block' ? blockFromId ?? selectedBlock ?? (editor.getTextCursorPosition().block as Block) : null
+        scope === 'block' ? blockFromId ?? (editor.getTextCursorPosition().block as Block) : null
       const targetBlockId = targetBlock?.id ?? requestedBlockId
       const content =
         scope === 'block'
@@ -168,7 +170,7 @@ export const useAiRunner = ({
       const requestStartedAt = nowMs()
       const runContext = `章节：${activeChapter.title}\n标签：${activeChapter.tags.join(',')}`
       const basePayloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
-      const baseRunRequest = {
+      const baseRunRequest: AiRunRequest = {
         action,
         content,
         context: runContext,
@@ -290,7 +292,6 @@ export const useAiRunner = ({
       pushLog,
       resolvedAgentId,
       resolvedProviderId,
-      selectedBlock,
       settings
     ]
   )

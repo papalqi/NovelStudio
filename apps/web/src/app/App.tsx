@@ -389,10 +389,10 @@ export const App = () => {
       const nextText = getPlainTextFromBlock(nextBlock)
       const headerChanged = headerText !== header
       const snapshotChanged = nextBlock?.type === 'paragraph' && nextText !== snapshot
-      if (headerChanged) {
+      if (headerChanged && block.id) {
         editor.updateBlock(block.id, { content: header })
       }
-      if (snapshotChanged && nextBlock) {
+      if (snapshotChanged && nextBlock?.id) {
         editor.updateBlock(nextBlock.id, { content: snapshot })
       }
       if (headerChanged || snapshotChanged) {
@@ -534,7 +534,6 @@ export const App = () => {
     editor,
     settings,
     activeChapter,
-    selectedBlock,
     resolvedChapterId,
     resolvedProviderId,
     resolvedAgentId,
@@ -793,7 +792,6 @@ export const App = () => {
               diffVersion={diffVersion}
               onExitDiff={handleExitDiff}
               onRunAiAction={handleRunAiAction}
-              selectedBlock={selectedBlock}
               onTitleChange={(title) => handleChapterMetaUpdate({ title })}
               onStatusChange={(status: ChapterStatus) => handleChapterMetaUpdate({ status })}
               onTagsChange={(tags) => handleChapterMetaUpdate({ tags })}
