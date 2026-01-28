@@ -2,31 +2,20 @@ import express from 'express'
 import cors from 'cors'
 import { z } from 'zod'
 import crypto from 'node:crypto'
-import { dataDir } from './db.js'
+import { dataDir, getUserDb } from './db.js'
+import { buildOpenAiEndpoint } from './openAiUrl.js'
 import {
-  getSettings,
-  saveSettings,
-  listVolumes,
-  upsertVolume,
-  deleteVolume,
-  listChapters,
-  getChapter,
-  upsertChapter,
-  updateChapterContent,
-  deleteChapter,
-  listVersions,
-  createVersion,
-  restoreVersion,
-  listNotes,
-  upsertNote,
-  deleteNote,
-  listComments,
-  addComment,
-  listAiRuns,
-  createAiRun
+  createStore
 } from './store.js'
-import { resetDatabase } from './seedUtils.js'
+import { resetDatabase, clearWorkspaceData } from './seedUtils.js'
 import { enforceTestResetGuard } from './testGuards.js'
+import {
+  createUser,
+  authenticateUser,
+  createSession,
+  getSessionByToken,
+  revokeSession
+} from './authStore.js'
 
 const app = express()
 const port = process.env.PORT || 8787
@@ -151,14 +140,44 @@ const DEFAULT_SETTINGS = {
 
 const uuid = () => crypto.randomUUID()
 
-const normalizeBaseUrl = (value) => value.replace(/\/$/, '')
+const storeCache = new Map()
 
-const buildOpenAiEndpoint = (baseUrl, path) => {
-  const normalized = normalizeBaseUrl(baseUrl)
-  const withV1 = normalized.endsWith('/v1') ? normalized : `${normalized}/v1`
-  const trimmedPath = path.replace(/^\//, '')
-  return `${withV1}/${trimmedPath}`
+const getStoreForUser = (userId) => {
+  if (!storeCache.has(userId)) {
+    storeCache.set(userId, createStore(getUserDb(userId)))
+  }
+  return storeCache.get(userId)
 }
+
+const getBearerToken = (req) => {
+  const header = req.headers.authorization || ''
+  const [type, token] = header.split(' ')
+  if (type !== 'Bearer' || !token) return null
+  return token.trim()
+}
+
+const requireAuth = (req, res, next) => {
+  const token = getBearerToken(req)
+  if (!token) {
+    return res.status(401).json({ error: '未登录' })
+  }
+  const session = getSessionByToken(token)
+  if (!session) {
+    return res.status(401).json({ error: '登录已过期' })
+  }
+  req.user = { id: session.userId, username: session.username }
+  req.store = getStoreForUser(session.userId)
+  req.sessionToken = token
+  return next()
+}
+
+const PUBLIC_ROUTES = new Set(['/api/health', '/api/auth/login', '/api/auth/register'])
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return next()
+  if (PUBLIC_ROUTES.has(req.path)) return next()
+  return requireAuth(req, res, next)
+})
 
 const extractModelIds = (payload) => {
   if (!payload) return []
@@ -195,40 +214,90 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
 
-app.get('/api/bootstrap', (_req, res) => {
-  const settings = mergeSettings(getSettings())
-  const volumes = listVolumes()
-  const chapters = listChapters()
-  const notes = listNotes()
+app.post('/api/auth/register', (req, res) => {
+  const schema = z.object({
+    username: z.string().min(3).max(64),
+    password: z.string().min(6).max(128)
+  })
+  try {
+    const body = schema.parse(req.body)
+    const user = createUser({ username: body.username, password: body.password })
+    const session = createSession(user.id)
+    res.json({ userId: user.id, username: user.username, token: session.token, expiresAt: session.expiresAt })
+  } catch (error) {
+    if (error?.code === 'user_exists') {
+      return res.status(409).json({ error: '用户名已存在' })
+    }
+    return res.status(400).json({ error: error.message })
+  }
+})
+
+app.post('/api/auth/login', (req, res) => {
+  const schema = z.object({
+    username: z.string().min(3).max(64),
+    password: z.string().min(6).max(128)
+  })
+  try {
+    const body = schema.parse(req.body)
+    const user = authenticateUser({ username: body.username, password: body.password })
+    if (!user) {
+      return res.status(401).json({ error: '用户名或密码错误' })
+    }
+    const session = createSession(user.id)
+    res.json({ userId: user.id, username: user.username, token: session.token, expiresAt: session.expiresAt })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+app.get('/api/auth/me', (req, res) => {
+  res.json({ userId: req.user.id, username: req.user.username })
+})
+
+app.post('/api/auth/logout', (req, res) => {
+  revokeSession(req.sessionToken)
+  res.json({ ok: true })
+})
+
+app.post('/api/account/clear', (req, res) => {
+  clearWorkspaceData(getUserDb(req.user.id))
+  res.json({ ok: true })
+})
+
+app.get('/api/bootstrap', (req, res) => {
+  const settings = mergeSettings(req.store.getSettings())
+  const volumes = req.store.listVolumes()
+  const chapters = req.store.listChapters()
+  const notes = req.store.listNotes()
   res.json({ settings, volumes, chapters, notes })
 })
 
-app.get('/api/settings', (_req, res) => {
-  res.json(mergeSettings(getSettings()))
+app.get('/api/settings', (req, res) => {
+  res.json(mergeSettings(req.store.getSettings()))
 })
 
 app.put('/api/settings', (req, res) => {
   const payload = req.body
-  const settings = saveSettings(payload)
+  const settings = req.store.saveSettings(payload)
   res.json(mergeSettings(settings))
 })
 
 app.post('/api/volumes', (req, res) => {
   const schema = z.object({ id: z.string().default(uuid()), title: z.string(), orderIndex: z.number().default(0) })
   const volume = schema.parse(req.body)
-  upsertVolume(volume)
+  req.store.upsertVolume(volume)
   res.json({ ok: true })
 })
 
 app.put('/api/volumes/:id', (req, res) => {
   const schema = z.object({ title: z.string(), orderIndex: z.number() })
   const body = schema.parse(req.body)
-  upsertVolume({ id: req.params.id, ...body })
+  req.store.upsertVolume({ id: req.params.id, ...body })
   res.json({ ok: true })
 })
 
 app.delete('/api/volumes/:id', (req, res) => {
-  deleteVolume(req.params.id)
+  req.store.deleteVolume(req.params.id)
   res.json({ ok: true })
 })
 
@@ -246,12 +315,12 @@ app.post('/api/chapters', (req, res) => {
     revision: z.number().default(1)
   })
   const chapter = schema.parse(req.body)
-  const saved = upsertChapter(chapter)
+  const saved = req.store.upsertChapter(chapter)
   res.json(saved)
 })
 
 app.get('/api/chapters/:id', (req, res) => {
-  const chapter = getChapter(req.params.id)
+  const chapter = req.store.getChapter(req.params.id)
   if (!chapter) return res.status(404).json({ error: 'not found' })
   res.json(chapter)
 })
@@ -269,7 +338,7 @@ app.put('/api/chapters/:id', (req, res) => {
     revision: z.number().optional()
   })
   const body = schema.parse(req.body)
-  const saved = upsertChapter({ id: req.params.id, ...body })
+  const saved = req.store.upsertChapter({ id: req.params.id, ...body })
   res.json(saved)
 })
 
@@ -281,12 +350,12 @@ app.put('/api/chapters/:id/content', (req, res) => {
     revision: z.number().optional()
   })
   const body = schema.parse(req.body)
-  const existing = getChapter(req.params.id)
+  const existing = req.store.getChapter(req.params.id)
   if (!existing) return res.status(404).json({ error: 'not found' })
   if (typeof body.revision === 'number' && existing.revision !== body.revision) {
     return res.status(409).send('conflict')
   }
-  const saved = updateChapterContent({
+  const saved = req.store.updateChapterContent({
     id: req.params.id,
     content: body.content,
     wordCount: body.wordCount,
@@ -297,61 +366,61 @@ app.put('/api/chapters/:id/content', (req, res) => {
 })
 
 app.delete('/api/chapters/:id', (req, res) => {
-  deleteChapter(req.params.id)
+  req.store.deleteChapter(req.params.id)
   res.json({ ok: true })
 })
 
 app.get('/api/chapters/:id/versions', (req, res) => {
-  res.json(listVersions(req.params.id))
+  res.json(req.store.listVersions(req.params.id))
 })
 
 app.post('/api/chapters/:id/versions', (req, res) => {
   const schema = z.object({ snapshot: z.any() })
   const body = schema.parse(req.body)
-  const versions = createVersion({ id: uuid(), chapterId: req.params.id, snapshot: body.snapshot })
+  const versions = req.store.createVersion({ id: uuid(), chapterId: req.params.id, snapshot: body.snapshot })
   res.json(versions)
 })
 
 app.post('/api/chapters/:id/restore/:versionId', (req, res) => {
-  const chapter = restoreVersion({ chapterId: req.params.id, versionId: req.params.versionId })
+  const chapter = req.store.restoreVersion({ chapterId: req.params.id, versionId: req.params.versionId })
   if (!chapter) return res.status(404).json({ error: 'not found' })
   res.json(chapter)
 })
 
-app.get('/api/notes', (_req, res) => {
-  res.json(listNotes())
+app.get('/api/notes', (req, res) => {
+  res.json(req.store.listNotes())
 })
 
 app.post('/api/notes', (req, res) => {
   const schema = z.object({ id: z.string().default(uuid()), type: z.string(), title: z.string(), content: z.any().default({}) })
   const note = schema.parse(req.body)
-  res.json(upsertNote(note))
+  res.json(req.store.upsertNote(note))
 })
 
 app.put('/api/notes/:id', (req, res) => {
   const schema = z.object({ type: z.string(), title: z.string(), content: z.any() })
   const body = schema.parse(req.body)
-  res.json(upsertNote({ id: req.params.id, ...body }))
+  res.json(req.store.upsertNote({ id: req.params.id, ...body }))
 })
 
 app.delete('/api/notes/:id', (req, res) => {
-  deleteNote(req.params.id)
+  req.store.deleteNote(req.params.id)
   res.json({ ok: true })
 })
 
 app.get('/api/chapters/:id/comments', (req, res) => {
-  res.json(listComments(req.params.id))
+  res.json(req.store.listComments(req.params.id))
 })
 
 app.post('/api/chapters/:id/comments', (req, res) => {
   const schema = z.object({ author: z.string().default('匿名'), body: z.string() })
   const body = schema.parse(req.body)
-  res.json(addComment({ id: uuid(), chapterId: req.params.id, author: body.author, body: body.body }))
+  res.json(req.store.addComment({ id: uuid(), chapterId: req.params.id, author: body.author, body: body.body }))
 })
 
 app.get('/api/ai/runs', (req, res) => {
   const chapterId = req.query.chapterId
-  res.json(listAiRuns(typeof chapterId === 'string' ? chapterId : undefined))
+  res.json(req.store.listAiRuns(typeof chapterId === 'string' ? chapterId : undefined))
 })
 
 app.post('/api/ai/runs', (req, res) => {
@@ -367,13 +436,13 @@ app.post('/api/ai/runs', (req, res) => {
     response: z.any()
   })
   const body = schema.parse(req.body)
-  const saved = createAiRun(body)
+  const saved = req.store.createAiRun(body)
   res.json(saved)
 })
 
 if (testResetEnabled) {
-  app.post('/api/test/reset', (_req, res) => {
-    resetDatabase()
+  app.post('/api/test/reset', (req, res) => {
+    resetDatabase(getUserDb(req.user.id), { seed: true })
     res.json({ ok: true })
   })
 }

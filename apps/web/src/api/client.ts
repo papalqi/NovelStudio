@@ -1,3 +1,5 @@
+import { getAuthToken } from '../utils/auth'
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1'])
 
 const stripTrailingSlash = (value: string) => value.replace(/\/$/, '')
@@ -33,11 +35,22 @@ export const resolveApiBaseUrl = (baseUrl?: string) => {
   return normalized
 }
 
+type HeaderMap = Record<string, string>
+
+export const withAuthHeader = (headers: HeaderMap = {}) => {
+  const token = getAuthToken()
+  if (token && !('Authorization' in headers)) {
+    return { ...headers, Authorization: `Bearer ${token}` }
+  }
+  return headers
+}
+
 export const createApiClient = (baseUrl?: string) => {
   const resolvedBaseUrl = resolveApiBaseUrl(baseUrl)
   const fetchJson = async <T>(path: string, options?: RequestInit): Promise<T> => {
+    const headers = withAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) })
     const res = await fetch(`${resolvedBaseUrl}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+      headers,
       ...options
     })
     if (!res.ok) {

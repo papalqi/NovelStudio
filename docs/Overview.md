@@ -9,7 +9,9 @@ NovelstudioAI 是一个面向网络小说创作的前端原型，核心理念：
 ## 目录说明
 
 - `apps/web/`：前端应用（React + Vite + BlockNote）
+- `apps/web/src/app/utils/`：前端页面级工具函数（与 UI 组件解耦）
 - `apps/server/`：本地后端（Node + SQLite）
+- `apps/server/tests/`：后端基础单元测试（node:test）
 - `apps/server/data/`：SQLite 数据库文件（不提交）
 - `docs/`：需求、规划、实现 TODO 文档
 - `public/`：静态资源（仅前端使用）

@@ -1,4 +1,4 @@
-import { createApiClient, resolveApiBaseUrl } from './client'
+import { createApiClient, resolveApiBaseUrl, withAuthHeader } from './client'
 import type {
   AppBootstrap,
   Chapter,
@@ -11,6 +11,39 @@ import type {
   AiRunRecord
 } from '../types'
 import { normalizeAiRequestSettings } from '../utils/aiRequest'
+
+export type AuthResponse = {
+  userId: string
+  username: string
+  token: string
+  expiresAt: string
+}
+
+export type AuthProfile = {
+  userId: string
+  username: string
+}
+
+export const registerUser = (payload: { username: string; password: string }, baseUrl?: string) =>
+  createApiClient(baseUrl).fetchJson<AuthResponse>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
+export const loginUser = (payload: { username: string; password: string }, baseUrl?: string) =>
+  createApiClient(baseUrl).fetchJson<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
+export const fetchAuthProfile = (baseUrl?: string) =>
+  createApiClient(baseUrl).fetchJson<AuthProfile>('/api/auth/me')
+
+export const logoutUser = (baseUrl?: string) =>
+  createApiClient(baseUrl).fetchJson<{ ok: boolean }>('/api/auth/logout', { method: 'POST' })
+
+export const clearUserWorkspace = (baseUrl?: string) =>
+  createApiClient(baseUrl).fetchJson<{ ok: boolean }>('/api/account/clear', { method: 'POST' })
 
 export const fetchBootstrap = (baseUrl?: string) =>
   createApiClient(baseUrl).fetchJson<AppBootstrap>('/api/bootstrap')
@@ -229,12 +262,13 @@ export const runAiCompletion = (
     let attempt = 0
     while (attempt < maxAttempts) {
       attempt += 1
+      const headers = withAuthHeader({ 'Content-Type': 'application/json' })
       const controller = new AbortController()
       const timeoutId = config.timeoutMs > 0 ? setTimeout(() => controller.abort(), config.timeoutMs) : undefined
       try {
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload),
           signal: controller.signal
         })

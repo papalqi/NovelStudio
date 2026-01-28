@@ -1,21 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download } from 'lucide-react'
+import { ArrowLeft, User, Palette, Bot, Cpu, Cloud, Save, Download, Shield } from 'lucide-react'
 import type { Settings, Provider, Agent, AiRequestSettings } from '../../types'
+import type { AuthUser } from '../../utils/auth'
 import { createId } from '../../utils/id'
 import { normalizeAiRequestSettings } from '../../utils/aiRequest'
 import { ProvidersSection } from './ProvidersSection'
-import { Card, Input, Select, Toggle, Button } from './common'
+import { Card, Input, Select, Toggle, Button, Modal } from './common'
 import './SettingsPage.css'
 
 type SettingsPageProps = {
   settings: Settings | null
   onBack: () => void
   onSave: (settings: Settings) => void
+  authUser?: AuthUser | null
+  onLogout?: () => void
+  onClearWorkspace?: () => Promise<void>
 }
 
-type SettingsCategory = 'profile' | 'appearance' | 'providers' | 'agents' | 'ai' | 'sync' | 'autosave' | 'export'
+type SettingsCategory =
+  | 'account'
+  | 'profile'
+  | 'appearance'
+  | 'providers'
+  | 'agents'
+  | 'ai'
+  | 'sync'
+  | 'autosave'
+  | 'export'
 
 const NAV_ITEMS: { id: SettingsCategory; label: string; icon: typeof User }[] = [
+  { id: 'account', label: '账号/工作空间', icon: Shield },
   { id: 'profile', label: '个人资料', icon: User },
   { id: 'appearance', label: '外观', icon: Palette },
   { id: 'providers', label: 'Provider 配置', icon: Cpu },
@@ -26,9 +40,12 @@ const NAV_ITEMS: { id: SettingsCategory; label: string; icon: typeof User }[] = 
   { id: 'export', label: '导出', icon: Download }
 ]
 
-export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) => {
+export const SettingsPage = ({ settings, onBack, onSave, authUser, onLogout, onClearWorkspace }: SettingsPageProps) => {
   const [draft, setDraft] = useState<Settings | null>(settings)
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('profile')
+  const [clearModalOpen, setClearModalOpen] = useState(false)
+  const [clearStatus, setClearStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [clearMessage, setClearMessage] = useState('')
 
   useEffect(() => {
     if (!settings) return
@@ -43,6 +60,105 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
   }, [settings])
 
   if (!draft) return null
+
+  const handleClearWorkspace = async () => {
+    if (!onClearWorkspace) return
+    setClearStatus('loading')
+    setClearMessage('')
+    try {
+      await onClearWorkspace()
+      setClearStatus('success')
+      setClearMessage('已清空当前工作空间数据')
+      setClearModalOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '清空失败'
+      setClearStatus('error')
+      setClearMessage(message)
+    }
+  }
+
+  const renderAccountSection = () => (
+    <div className="settings-content-inner">
+      <Card>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="settings-row-label">当前账号</span>
+            <div className="settings-row-control">
+              <span className="settings-inline-text" data-testid="settings-auth-user">
+                {authUser?.username ?? '未知账号'}
+              </span>
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">账号 ID</span>
+            <div className="settings-row-control">
+              <span className="settings-inline-text" data-testid="settings-auth-userid">
+                {authUser?.userId ?? '-'}
+              </span>
+            </div>
+          </div>
+          {onLogout && (
+            <div className="settings-row">
+              <span className="settings-row-label">账号操作</span>
+              <div className="settings-row-control settings-row-actions">
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={onLogout}
+                  data-testid="settings-auth-logout"
+                >
+                  退出登录
+                </Button>
+              </div>
+            </div>
+          )}
+          {onClearWorkspace && (
+            <div className="settings-row">
+              <span className="settings-row-label">工作空间</span>
+              <div className="settings-row-control settings-row-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setClearModalOpen(true)
+                    setClearStatus('idle')
+                    setClearMessage('')
+                  }}
+                  data-testid="settings-auth-clear"
+                >
+                  清空当前工作区
+                </Button>
+              </div>
+            </div>
+          )}
+          {clearMessage && (
+            <div className={`settings-alert ${clearStatus}`} data-testid="settings-auth-clear-status">
+              {clearMessage}
+            </div>
+          )}
+        </div>
+      </Card>
+      <Modal open={clearModalOpen} onClose={() => setClearModalOpen(false)} title="确认清空工作区">
+        <div className="settings-modal-body">
+          <p>此操作将删除当前账号下的章节、卷、资料库与 AI 记录，且无法恢复。</p>
+          <div className="settings-modal-actions">
+            <Button variant="ghost" size="sm" onClick={() => setClearModalOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={clearStatus === 'loading'}
+              onClick={handleClearWorkspace}
+              data-testid="settings-auth-clear-confirm"
+            >
+              确认清空
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  )
 
   const setProviders = useCallback((updater: (prev: Provider[]) => Provider[]) => {
     setDraft((prev) => {
@@ -104,6 +220,12 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
                 placeholder="输入作者名称"
                 data-testid="settings-author-name"
               />
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-label">账号入口</span>
+            <div className="settings-row-control">
+              <span className="settings-inline-text">请到“账号/工作空间”管理</span>
             </div>
           </div>
         </div>
@@ -520,6 +642,8 @@ export const SettingsPage = ({ settings, onBack, onSave }: SettingsPageProps) =>
 
   const renderContent = () => {
     switch (activeCategory) {
+      case 'account':
+        return renderAccountSection()
       case 'profile':
         return renderProfileSection()
       case 'appearance':

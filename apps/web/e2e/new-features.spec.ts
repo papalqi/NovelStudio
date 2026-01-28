@@ -45,8 +45,15 @@ const selectBatchTarget = async (page: Page, label: string) => {
   await page.getByRole('option', { name: label }).click()
 }
 
-test.beforeEach(async ({ request }) => {
-  await resetTestData(request)
+let authToken = ''
+
+test.beforeEach(async ({ request, page }) => {
+  const auth = await resetTestData(request)
+  authToken = auth.token
+  await page.addInitScript(({ token, userId, username }) => {
+    window.localStorage.setItem('novelstudio.auth.token', token)
+    window.localStorage.setItem('novelstudio.auth.user', JSON.stringify({ userId, username }))
+  }, { token: auth.token, userId: auth.userId, username: auth.username })
 })
 
 test('version diff mode compares history', async ({ page }) => {
@@ -240,11 +247,16 @@ test('knowledge base references can insert and refresh', async ({ page }) => {
 })
 
 test('AI retry respects request settings', async ({ page, request }) => {
-  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`)
+  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`, {
+    headers: { Authorization: `Bearer ${authToken}` }
+  })
   const settings = await settingsResponse.json()
   settings.ai.request.maxRetries = 1
   settings.ai.request.retryDelayMs = 0
-  await request.put(`${E2E_API_BASE_URL}/api/settings`, { data: settings })
+  await request.put(`${E2E_API_BASE_URL}/api/settings`, {
+    data: settings,
+    headers: { Authorization: `Bearer ${authToken}` }
+  })
 
   let callCount = 0
   await page.route('**/api/ai/complete', async (route) => {
@@ -285,7 +297,9 @@ test('AI retry respects request settings', async ({ page, request }) => {
 })
 
 test('agent serial schema output and replay', async ({ page, request }) => {
-  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`)
+  const settingsResponse = await request.get(`${E2E_API_BASE_URL}/api/settings`, {
+    headers: { Authorization: `Bearer ${authToken}` }
+  })
   const settings = await settingsResponse.json()
   const providerId = settings.providers[0].id
   const schema = JSON.stringify({
@@ -316,7 +330,10 @@ test('agent serial schema output and replay', async ({ page, request }) => {
   settings.ai.defaultAgentId = 'agent-serial-1'
   settings.ai.request.maxRetries = 0
   settings.ai.request.retryDelayMs = 0
-  await request.put(`${E2E_API_BASE_URL}/api/settings`, { data: settings })
+  await request.put(`${E2E_API_BASE_URL}/api/settings`, {
+    data: settings,
+    headers: { Authorization: `Bearer ${authToken}` }
+  })
 
   let callCount = 0
   await page.route('**/api/ai/complete', async (route) => {
@@ -411,7 +428,8 @@ test('conflict modal appears on revision mismatch', async ({ page, request }) =>
       content: [{ id: 'conflict-block', type: 'paragraph', content: 'server update' }],
       wordCount: 2,
       updatedAt: new Date().toISOString()
-    }
+    },
+    headers: { Authorization: `Bearer ${authToken}` }
   })
 
   const conflictResponse = page.waitForResponse(

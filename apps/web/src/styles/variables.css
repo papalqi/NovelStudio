@@ -27,6 +27,17 @@
   --color-accent-hover: #0056b3;
   --color-accent-active: #004494;
   --color-accent-subtle: rgba(0, 122, 255, 0.1);
+
+  /* 旧版组件兼容变量 (Legacy Tokens) */
+  --accent: var(--color-accent);
+  --accent-dark: var(--color-accent-hover);
+  --bg-accent: var(--color-accent-subtle);
+  --panel: var(--color-bg-elevated);
+  --panel-border: var(--color-border-secondary);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --radius: var(--radius-lg);
+  --shadow: var(--shadow-sm);
   
   /* 语义色 */
   --color-success: #34c759;
@@ -155,6 +166,17 @@ html[data-theme='dark'] {
   --color-accent-active: #64b5ff;
   --color-accent-subtle: rgba(10, 132, 255, 0.15);
 
+  /* 旧版组件兼容变量 (Legacy Tokens) */
+  --accent: var(--color-accent);
+  --accent-dark: var(--color-accent-hover);
+  --bg-accent: var(--color-accent-subtle);
+  --panel: var(--color-bg-elevated);
+  --panel-border: var(--color-border-secondary);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --radius: var(--radius-lg);
+  --shadow: var(--shadow-sm);
+
   /* 语义色 */
   --color-success: #30d158;
   --color-warning: #ff9f0a;
@@ -203,4 +225,3 @@ html[data-theme='dark'] ::-webkit-scrollbar-thumb {
 html[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
-

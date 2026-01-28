@@ -24,6 +24,15 @@
   overflow-x: hidden;
 }
 
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
 /* ============================================
  * 工作区布局
  * ============================================ */

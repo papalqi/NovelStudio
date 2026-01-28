@@ -26,9 +26,14 @@ import { normalizeAiRequestSettings } from '../../utils/aiRequest'
 
 const CACHE_KEY = 'novelstudio.cache.v1'
 
-const loadCache = (): AppBootstrap | null => {
+const buildCacheKey = (userId?: string | null) => {
+  if (!userId) return `${CACHE_KEY}.anonymous`
+  return `${CACHE_KEY}.${userId}`
+}
+
+const loadCache = (cacheKey: string): AppBootstrap | null => {
   try {
-    const raw = localStorage.getItem(CACHE_KEY)
+    const raw = localStorage.getItem(cacheKey)
     if (!raw) return null
     return JSON.parse(raw) as AppBootstrap
   } catch {
@@ -36,8 +41,8 @@ const loadCache = (): AppBootstrap | null => {
   }
 }
 
-const saveCache = (payload: AppBootstrap) => {
-  localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
+const saveCache = (cacheKey: string, payload: AppBootstrap) => {
+  localStorage.setItem(cacheKey, JSON.stringify(payload))
 }
 
 const normalizeSettings = (settings: Settings): Settings => ({
@@ -58,16 +63,22 @@ export type AppDataState = {
   offline: boolean
 }
 
-export const useAppData = () => {
-  const [state, setState] = useState<AppDataState>({
-    settings: null,
-    volumes: [],
-    chapters: [],
-    notes: [],
-    loading: true,
-    error: null,
-    offline: false
-  })
+export const useAppData = (options?: { enabled?: boolean; userId?: string | null }) => {
+  const enabled = options?.enabled ?? true
+  const cacheKey = useMemo(() => buildCacheKey(options?.userId), [options?.userId])
+  const initialState: AppDataState = useMemo(
+    () => ({
+      settings: null,
+      volumes: [],
+      chapters: [],
+      notes: [],
+      loading: enabled,
+      error: null,
+      offline: false
+    }),
+    [enabled]
+  )
+  const [state, setState] = useState<AppDataState>(initialState)
 
   const apiBaseUrl = resolveApiBaseUrl(state.settings?.sync.apiBaseUrl)
 
@@ -82,21 +93,22 @@ export const useAppData = () => {
       error: null,
       offline
     })
-    saveCache({
+    saveCache(cacheKey, {
       settings: normalizedSettings,
       volumes: payload.volumes,
       chapters: payload.chapters,
       notes: payload.notes
     })
-  }, [])
+  }, [cacheKey])
 
   const refresh = useCallback(async () => {
+    if (!enabled) return
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }))
       const data = await fetchBootstrap(apiBaseUrl)
       applyBootstrap(data, false)
     } catch (error: unknown) {
-      const cached = loadCache()
+      const cached = loadCache(cacheKey)
       if (cached) {
         applyBootstrap(cached, true)
       } else {
@@ -104,22 +116,26 @@ export const useAppData = () => {
         setState((prev) => ({ ...prev, loading: false, error: message }))
       }
     }
-  }, [apiBaseUrl, applyBootstrap])
+  }, [apiBaseUrl, applyBootstrap, cacheKey, enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      setState(initialState)
+      return
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
-  }, [refresh])
+  }, [enabled, initialState, refresh])
 
   useEffect(() => {
     if (!state.settings) return
-    saveCache({
+    saveCache(cacheKey, {
       settings: state.settings,
       volumes: state.volumes,
       chapters: state.chapters,
       notes: state.notes
     })
-  }, [state.settings, state.volumes, state.chapters, state.notes])
+  }, [cacheKey, state.settings, state.volumes, state.chapters, state.notes])
 
   const updateSettings = useCallback(
     async (next: Settings) => {
@@ -127,7 +143,7 @@ export const useAppData = () => {
       const saved = await saveSettings(normalized, normalized.sync.apiBaseUrl)
       const normalizedSaved = normalizeSettings(saved)
       setState((prev) => ({ ...prev, settings: normalizedSaved }))
-      saveCache({
+      saveCache(cacheKey, {
         settings: normalizedSaved,
         volumes: state.volumes,
         chapters: state.chapters,
@@ -135,7 +151,7 @@ export const useAppData = () => {
       })
       return normalizedSaved
     },
-    [state.chapters, state.notes, state.volumes]
+    [cacheKey, state.chapters, state.notes, state.volumes]
   )
 
   const upsertVolume = useCallback(

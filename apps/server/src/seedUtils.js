@@ -1,18 +1,24 @@
-import { db } from './db.js'
 import { seedSettings, seedVolumes, seedChapters, seedNotes } from './seedData.js'
 
-export const clearDatabase = () => {
+export const clearWorkspaceData = (db) => {
   db.exec(`
     delete from comments;
     delete from chapter_versions;
+    delete from ai_runs;
     delete from chapters;
     delete from volumes;
     delete from notes;
+  `)
+}
+
+export const clearDatabase = (db) => {
+  clearWorkspaceData(db)
+  db.exec(`
     delete from settings;
   `)
 }
 
-export const insertSeedData = () => {
+export const insertSeedData = (db) => {
   const settingsStmt = db.prepare(
     'insert into settings (key, value) values (?, ?)'
   )
@@ -55,7 +61,7 @@ export const insertSeedData = () => {
   })
 }
 
-export const resetDatabase = () => {
-  clearDatabase()
-  insertSeedData()
+export const resetDatabase = (db, { seed = true } = {}) => {
+  clearDatabase(db)
+  if (seed) insertSeedData(db)
 }

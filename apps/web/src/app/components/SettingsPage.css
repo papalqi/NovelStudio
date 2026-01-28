@@ -165,6 +165,49 @@
   width: 100%;
 }
 
+.settings-page .settings-row-actions {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.settings-page .settings-inline-text {
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.settings-page .settings-alert {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+}
+
+.settings-page .settings-alert.success {
+  border-color: color-mix(in srgb, var(--color-success) 50%, transparent);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+}
+
+.settings-page .settings-alert.error {
+  border-color: color-mix(in srgb, var(--color-danger) 50%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+.settings-page .settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.settings-page .settings-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 /* ============================================
  * Provider / Agent Cards
  * ============================================ */
@@ -192,6 +235,12 @@
 
 .settings-page .settings-item-header .input-wrapper {
   flex: 1;
+}
+
+.settings-page .provider-endpoint {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-1);
 }
 
 .settings-page .settings-item-fields {

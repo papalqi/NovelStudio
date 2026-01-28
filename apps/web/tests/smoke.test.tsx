@@ -62,6 +62,8 @@ const bootstrapResponse = {
 }
 
 beforeEach(() => {
+  localStorage.setItem('novelstudio.auth.token', 'test-token')
+  localStorage.setItem('novelstudio.auth.user', JSON.stringify({ userId: 'u1', username: '测试用户' }))
   if (!globalThis.fetch) {
     // @ts-expect-error test-only polyfill
     globalThis.fetch = vi.fn()
@@ -70,11 +72,15 @@ beforeEach(() => {
     if (typeof input === 'string' && input.includes('/api/bootstrap')) {
       return new Response(JSON.stringify(bootstrapResponse), { status: 200 })
     }
+    if (typeof input === 'string' && input.includes('/api/auth/me')) {
+      return new Response(JSON.stringify({ userId: 'u1', username: '测试用户' }), { status: 200 })
+    }
     return new Response(JSON.stringify([]), { status: 200 })
   })
 })
 
 afterEach(() => {
+  localStorage.clear()
   vi.restoreAllMocks()
 })
 

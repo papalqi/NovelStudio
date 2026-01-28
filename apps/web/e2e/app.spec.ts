@@ -12,8 +12,12 @@ const waitForExplorer = async (page: import('@playwright/test').Page) => {
   await expect(page.getByText('资源管理器')).toBeVisible()
 }
 
-test.beforeEach(async ({ request }) => {
-  await resetTestData(request)
+test.beforeEach(async ({ request, page }) => {
+  const auth = await resetTestData(request)
+  await page.addInitScript(({ token, userId, username }) => {
+    window.localStorage.setItem('novelstudio.auth.token', token)
+    window.localStorage.setItem('novelstudio.auth.user', JSON.stringify({ userId, username }))
+  }, { token: auth.token, userId: auth.userId, username: auth.username })
 })
 
 const createVolumeWithFeedback = async (page: import('@playwright/test').Page) => {

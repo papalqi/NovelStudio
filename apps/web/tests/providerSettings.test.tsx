@@ -48,6 +48,7 @@ test('auto fetches provider models and applies default selection', async () => {
 
   await waitFor(() => expect(fetchProviderModelsMock).toHaveBeenCalled(), { timeout: 2000 })
   await waitFor(() => expect(screen.getByTestId('settings-provider-model-p1')).toHaveValue('model-a'))
+  expect(screen.getByTestId('settings-provider-endpoint-p1')).toHaveTextContent('http://api.test/v1/')
 })
 
 test('runs provider availability test from settings panel', async () => {
@@ -69,4 +70,17 @@ test('runs provider availability test from settings panel', async () => {
   await waitFor(() =>
     expect(screen.getByTestId('settings-provider-test-status-p1')).toHaveTextContent('通过')
   )
+})
+
+test('displays base url without v1 when baseUrl ends with #', () => {
+  const settingsWithHash: Settings = {
+    ...baseSettings,
+    providers: [{ ...baseSettings.providers[0], baseUrl: 'https://api.papalqi.top#' }]
+  }
+
+  render(<SettingsPage settings={settingsWithHash} onBack={vi.fn()} onSave={vi.fn()} />)
+
+  fireEvent.click(screen.getByTestId('settings-nav-providers'))
+
+  expect(screen.getByTestId('settings-provider-endpoint-p1')).toHaveTextContent('https://api.papalqi.top/')
 })

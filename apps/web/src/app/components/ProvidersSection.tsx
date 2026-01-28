@@ -55,6 +55,18 @@ const formatTimeLabel = (value?: string) => {
   }
 }
 
+const buildDisplayBaseUrl = (baseUrl: string) => {
+  const trimmed = baseUrl.trim()
+  if (!trimmed) return ''
+  const disableV1 = trimmed.endsWith('#')
+  const withoutHash = disableV1 ? trimmed.slice(0, -1) : trimmed
+  const normalized = withoutHash.replace(/\/$/, '')
+  if (!normalized) return ''
+  if (disableV1) return `${normalized}/`
+  if (normalized.endsWith('/v1')) return `${normalized}/`
+  return `${normalized}/v1/`
+}
+
 export const ProvidersSection = ({ providers, onSetProviders, syncApiBaseUrl }: ProvidersSectionProps) => {
   const [modelStates, setModelStates] = useState<Record<string, ProviderModelState>>({})
   const [testStates, setTestStates] = useState<Record<string, ProviderTestState>>({})
@@ -397,6 +409,12 @@ export const ProvidersSection = ({ providers, onSetProviders, syncApiBaseUrl }: 
                     label="API 地址"
                     data-testid={`settings-provider-baseurl-${provider.id}`}
                   />
+                  <div
+                    className="provider-endpoint"
+                    data-testid={`settings-provider-endpoint-${provider.id}`}
+                  >
+                    实际请求地址：{buildDisplayBaseUrl(provider.baseUrl) || '未配置'}
+                  </div>
                   <Input
                     value={provider.token}
                     onChange={(e) => updateProvider(provider.id, { token: e.target.value })}

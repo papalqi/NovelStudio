@@ -5,20 +5,30 @@ import { Explorer } from './components/Explorer'
 import { EditorPane } from './components/EditorPane'
 import { RightPanel } from './components/RightPanel'
 import { SettingsPage } from './components/SettingsPage'
+import { AuthPage } from './components/AuthPage'
 import { PreviewModal } from './components/PreviewModal'
 import { ConflictModal } from './components/ConflictModal'
 import { KnowledgeBasePage } from './components/KnowledgeBasePage'
 import { useAppData } from './hooks/useAppData'
 import { useConflictHandler } from './hooks/useConflictHandler'
 import { useChapterBulkActions } from './hooks/useChapterBulkActions'
+import { useAiRunner } from './hooks/useAiRunner'
 import { debounce } from '../utils/debounce'
 import { createId } from '../utils/id'
 import { estimateWordCount, getPlainTextFromBlock, getPlainTextFromDoc } from '../utils/text'
 import { nowMs } from '../utils/time'
 import { createLogEntry, type LogEntry } from '../utils/logging'
-import { runAiAction, getAiActionLabel, type AiAction } from '../ai/aiService'
-import { createAiRun, listAiRuns } from '../api'
-import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note, AiRunRecord } from '../types'
+import { loginUser, registerUser, fetchAuthProfile, logoutUser, clearUserWorkspace } from '../api'
+import type { Chapter, ChapterStatus, Settings, ChapterVersion, Comment, Block, Note } from '../types'
+import {
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+  getStoredAuthUser,
+  setStoredAuthUser,
+  clearStoredAuthUser
+} from '../utils/auth'
+import { buildNoteSnapshot, buildReferenceHeader, parseReferenceId } from './utils/knowledge'
 import './App.css'
 
 type AppPage = 'editor' | 'settings' | 'knowledge'
@@ -27,6 +37,48 @@ const formatDate = () => new Date().toISOString().slice(0, 10)
 
 export const App = () => {
   const editor = useCreateBlockNote()
+  const [authToken, setAuthTokenState] = useState(() => getAuthToken())
+  const [authUser, setAuthUser] = useState(() => getStoredAuthUser())
+  const [authChecking, setAuthChecking] = useState(true)
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    if (!authToken) {
+      setAuthChecking(false)
+      setAuthUser(null)
+      clearStoredAuthUser()
+      return () => {
+        active = false
+      }
+    }
+    setAuthChecking(true)
+    fetchAuthProfile()
+      .then((profile) => {
+        if (!active) return
+        setAuthUser(profile)
+        setStoredAuthUser(profile)
+      })
+      .catch(() => {
+        if (!active) return
+        clearAuthToken()
+        clearStoredAuthUser()
+        setAuthTokenState('')
+        setAuthUser(null)
+      })
+      .finally(() => {
+        if (!active) return
+        setAuthChecking(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [authToken])
+
+  const isAuthenticated = Boolean(authToken && authUser)
+  const dataEnabled = isAuthenticated && !authChecking
+
   const {
     settings,
     volumes,
@@ -52,7 +104,7 @@ export const App = () => {
     removeNoteItem,
     loadComments,
     addChapterComment
-  } = useAppData()
+  } = useAppData({ enabled: dataEnabled, userId: authUser?.userId })
 
   const [activeVolumeId, setActiveVolumeId] = useState('')
   const [activeChapterId, setActiveChapterId] = useState('')
@@ -62,7 +114,6 @@ export const App = () => {
   const [activeProviderId, setActiveProviderId] = useState('')
   const [activeAgentId, setActiveAgentId] = useState('')
   const [aiLogs, setAiLogs] = useState<LogEntry[]>([])
-  const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([])
   const [diffVersion, setDiffVersion] = useState<ChapterVersion | null>(null)
   const [currentPage, setCurrentPage] = useState<AppPage>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -116,8 +167,9 @@ export const App = () => {
 
   // Load notes data for Knowledge Base Page
   useEffect(() => {
+    if (!dataEnabled) return
     refreshNotes()
-  }, [refreshNotes])
+  }, [dataEnabled, refreshNotes])
 
   const handleToggleTheme = () => {
     if (!settings) return
@@ -125,40 +177,80 @@ export const App = () => {
     updateSettings({ ...settings, ui: { ...settings.ui, theme: newTheme } })
   }
 
+  const handleLogin = useCallback(
+    async (payload: { username: string; password: string }) => {
+      setAuthError(null)
+      setAuthBusy(true)
+      try {
+        const response = await loginUser(payload)
+        setAuthTokenState(response.token)
+        setAuthToken(response.token)
+        const profile = { userId: response.userId, username: response.username }
+        setAuthUser(profile)
+        setStoredAuthUser(profile)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '登录失败'
+        setAuthError(message)
+      } finally {
+        setAuthBusy(false)
+      }
+    },
+    []
+  )
+
+  const handleRegister = useCallback(
+    async (payload: { username: string; password: string }) => {
+      setAuthError(null)
+      setAuthBusy(true)
+      try {
+        const response = await registerUser(payload)
+        setAuthTokenState(response.token)
+        setAuthToken(response.token)
+        const profile = { userId: response.userId, username: response.username }
+        setAuthUser(profile)
+        setStoredAuthUser(profile)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '注册失败'
+        setAuthError(message)
+      } finally {
+        setAuthBusy(false)
+      }
+    },
+    []
+  )
+
+  const handleLogout = useCallback(async () => {
+    setAuthBusy(true)
+    try {
+      await logoutUser()
+    } catch {
+      // ignore logout errors
+    } finally {
+      clearAuthToken()
+      clearStoredAuthUser()
+      setAuthTokenState('')
+      setAuthUser(null)
+      setAuthBusy(false)
+      setCurrentPage('editor')
+    }
+  }, [])
+
+  const handleClearWorkspace = useCallback(async () => {
+    await clearUserWorkspace(settings?.sync.apiBaseUrl)
+    setActiveVolumeId('')
+    setActiveChapterId('')
+    setSelectedBlock(null)
+    setVersions([])
+    setComments([])
+    await refresh()
+  }, [refresh, settings?.sync.apiBaseUrl])
+
   const handleSaveNote = (note: Partial<Note>) => {
     upsertNoteItem(note)
   }
 
   const handleDeleteNote = (noteId: string) => {
     removeNoteItem(noteId)
-  }
-
-  const noteTypeLabels: Record<Note['type'], string> = {
-    character: '角色',
-    location: '地点',
-    lore: '世界观',
-    reference: '引用'
-  }
-
-  const buildNoteSnapshot = (note: Note) => {
-    const description = typeof note.content.description === 'string' ? note.content.description.trim() : ''
-    if (description) return description
-    const fallback = Object.values(note.content).find(
-      (value) => typeof value === 'string' && value.trim().length > 0
-    )
-    if (typeof fallback === 'string') return fallback.trim()
-    return '（资料卡内容为空）'
-  }
-
-  const buildReferenceHeader = (note: Note) => {
-    const typeLabel = noteTypeLabels[note.type]
-    const suffix = typeLabel ? `${note.title}（${typeLabel}）` : note.title
-    return `【资料卡引用 kb:${note.id}】${suffix}`
-  }
-
-  const parseReferenceId = (content: string) => {
-    const match = content.match(/^【资料卡引用 kb:([A-Za-z0-9-]+)】/)
-    return match ? match[1] : null
   }
 
   const handleInsertNote = (note: Note) => {
@@ -269,86 +361,22 @@ export const App = () => {
     removeChapter
   })
 
-  const AI_ACTIONS: AiAction[] = [
-    'rewrite',
-    'expand',
-    'shorten',
-    'continue',
-    'outline',
-    'chapterCheck',
-    'characterCheck',
-    'styleTune',
-    'worldbuilding'
-  ]
-
-  const isValidAiAction = (value: string): value is AiAction => AI_ACTIONS.includes(value as AiAction)
-
-  const isBlockAction = (action: AiAction) =>
-    action === 'rewrite' || action === 'expand' || action === 'shorten' || action === 'continue'
-
-  const applyAiResult = (action: AiAction, resultContent: string, targetBlockId?: string): string | null => {
-    if (isBlockAction(action)) {
-      const fallbackBlock = editor.getTextCursorPosition().block as Block
-      const blockId = targetBlockId ?? selectedBlock?.id ?? fallbackBlock?.id
-      if (blockId) {
-        editor.updateBlock(blockId, { content: resultContent })
-        return blockId
-      }
-      return null
-    }
-
-    const currentDoc = editor.document as Block[]
-    const newBlockId = createId()
-    const newBlock: Block = { id: newBlockId, type: 'paragraph', content: resultContent }
-    const lastBlock = currentDoc[currentDoc.length - 1]
-    const referenceId = lastBlock?.id ?? currentDoc[0]?.id
-    if (referenceId) {
-      editor.insertBlocks([newBlock], referenceId, 'after')
-      return newBlockId
-    }
-    editor.replaceBlocks(currentDoc, [newBlock])
-    return newBlockId
-  }
-
-  const persistAiRun = useCallback(
-    async (record: AiRunRecord) => {
-      if (!settings) return
-      try {
-        const saved = await createAiRun(record, settings.sync.apiBaseUrl)
-        setAiRuns((prev) => [saved, ...prev].slice(0, 30))
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : '保存运行记录失败'
-        pushLog(
-          createLogEntry({
-            scope: 'agent',
-            status: 'error',
-            message: `保存运行记录失败：${message}`,
-            payloadSummary: `run=${record.id}`
-          })
-        )
-      }
-    },
-    [settings, pushLog]
-  )
+  const { aiRuns, handleRunAiAction, handleReplayRun } = useAiRunner({
+    editor,
+    settings,
+    activeChapter,
+    selectedBlock,
+    resolvedChapterId,
+    resolvedProviderId,
+    resolvedAgentId,
+    pushLog
+  })
 
   useEffect(() => {
     if (!resolvedChapterId) return
     loadVersions(resolvedChapterId).then(setVersions)
     loadComments(resolvedChapterId).then(setComments)
-    listAiRuns(resolvedChapterId, settings?.sync.apiBaseUrl)
-      .then(setAiRuns)
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : '获取运行记录失败'
-        pushLog(
-          createLogEntry({
-            scope: 'agent',
-            status: 'error',
-            message: `获取运行记录失败：${message}`,
-            payloadSummary: `chapter=${resolvedChapterId}`
-          })
-        )
-      })
-  }, [resolvedChapterId, loadVersions, loadComments, settings?.sync.apiBaseUrl, pushLog])
+  }, [resolvedChapterId, loadVersions, loadComments])
 
   useEffect(() => {
     setDiffVersion(null)
@@ -476,297 +504,6 @@ export const App = () => {
     void upsertVolume({ ...target, orderIndex: index })
   }
 
-  const focusAiResult = (blockId: string | null) => {
-    if (!blockId) return
-    editor.setTextCursorPosition(blockId, 'end')
-    editor.focus()
-  }
-
-  const handleRunAiAction = async (action: AiAction, requestedBlockId?: string): Promise<boolean> => {
-    if (!settings) return false
-    const requestId = createId()
-    if (!activeChapter) {
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'warn',
-          message: '请先选择章节',
-          payloadSummary: `action=${action}`
-        })
-      )
-      return false
-    }
-    const currentDoc = editor.document as Block[]
-    const scope = isBlockAction(action) ? 'block' : 'chapter'
-    const blockFromId = requestedBlockId ? (editor.getBlock(requestedBlockId) as Block | undefined) : undefined
-    const targetBlock =
-      scope === 'block' ? blockFromId ?? selectedBlock ?? (editor.getTextCursorPosition().block as Block) : null
-    const targetBlockId = targetBlock?.id ?? requestedBlockId
-    const content =
-      scope === 'block'
-        ? getPlainTextFromBlock(targetBlock)
-        : (editor.blocksToMarkdownLossy(currentDoc) as string)
-
-    if (!content) {
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'warn',
-          message: '没有可用文本',
-          payloadSummary: `action=${action} chapter=${activeChapter.id}`
-        })
-      )
-      return false
-    }
-
-    const requestStartedAt = nowMs()
-    const runContext = `章节：${activeChapter.title}\n标签：${activeChapter.tags.join(',')}`
-    const basePayloadSummary = `action=${action} chapter=${activeChapter.id} provider=${resolvedProviderId || '-'} agent=${resolvedAgentId || '-'} chars=${content.length}`
-    const baseRunRequest = {
-      action,
-      content,
-      context: runContext,
-      providerId: resolvedProviderId,
-      agentId: resolvedAgentId,
-      agentSequenceIds: [] as string[],
-      temperature: settings.ai.temperature,
-      maxTokens: settings.ai.maxTokens,
-      requestConfig: settings.ai.request,
-      targetBlockId,
-      scope
-    }
-
-    try {
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'info',
-          message: `${getAiActionLabel(action)} 处理中`,
-          payloadSummary: basePayloadSummary
-        })
-      )
-      const response = await runAiAction({
-        action,
-        content,
-        context: runContext,
-        settings,
-        providers: settings.providers,
-        agents: settings.agents,
-        providerId: resolvedProviderId,
-        agentId: resolvedAgentId
-      })
-      const appliedBlockId = applyAiResult(action, response.content, targetBlockId)
-      focusAiResult(appliedBlockId)
-      const successPayloadSummary = `${basePayloadSummary} retries=${response.meta.retries}`
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'success',
-          message: `${response.label} 完成`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: successPayloadSummary
-        })
-      )
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'agent',
-          status: 'success',
-          message: `Agent 执行完成`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${response.meta.retries}`
-        })
-      )
-      void persistAiRun({
-        id: createId(),
-        createdAt: new Date().toISOString(),
-        status: 'success',
-        chapterId: activeChapter.id,
-        action,
-        providerId: resolvedProviderId,
-        agentIds: response.agentSequenceIds,
-        request: { ...baseRunRequest, agentSequenceIds: response.agentSequenceIds },
-        response: { content: response.content, meta: response.meta }
-      })
-      return true
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'AI 调用失败'
-      const retryCount =
-        typeof (error as { retries?: number }).retries === 'number' ? (error as { retries: number }).retries : 0
-      const attempts =
-        typeof (error as { attempts?: number }).attempts === 'number'
-          ? (error as { attempts: number }).attempts
-          : retryCount + 1
-      const failurePayloadSummary = `${basePayloadSummary} retries=${retryCount}`
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'error',
-          message: `AI 失败：${message}`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: failurePayloadSummary
-        })
-      )
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'agent',
-          status: 'error',
-          message: `Agent 执行失败：${message}`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${resolvedAgentId || '-'} provider=${resolvedProviderId || '-'} action=${action} retries=${retryCount}`
-        })
-      )
-      const fallbackAgentIds = resolvedAgentId ? [resolvedAgentId] : []
-      void persistAiRun({
-        id: createId(),
-        createdAt: new Date().toISOString(),
-        status: 'error',
-        chapterId: activeChapter.id,
-        action,
-        providerId: resolvedProviderId,
-        agentIds: fallbackAgentIds,
-        request: { ...baseRunRequest, agentSequenceIds: fallbackAgentIds },
-        response: { error: message, meta: { retries: retryCount, attempts } }
-      })
-      return false
-    }
-  }
-
-  const handleReplayRun = async (run: AiRunRecord) => {
-    if (!settings) return
-    if (!isValidAiAction(run.request.action)) {
-      pushLog(
-        createLogEntry({
-          scope: 'agent',
-          status: 'error',
-          message: '无法重放：不支持的 AI 动作',
-          payloadSummary: `action=${run.request.action}`
-        })
-      )
-      return
-    }
-
-    const requestId = createId()
-    const requestStartedAt = nowMs()
-    const action = run.request.action
-    const replaySettings: Settings = {
-      ...settings,
-      ai: {
-        ...settings.ai,
-        temperature: run.request.temperature,
-        maxTokens: run.request.maxTokens,
-        request: run.request.requestConfig,
-        defaultProviderId: run.request.providerId ?? settings.ai.defaultProviderId,
-        defaultAgentId: run.request.agentId ?? settings.ai.defaultAgentId
-      }
-    }
-    const basePayloadSummary = `action=${action} replay=true provider=${run.request.providerId || '-'} agent=${run.request.agentId || '-'} chars=${run.request.content.length}`
-
-    try {
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'info',
-          message: `${getAiActionLabel(action)} 重放中`,
-          payloadSummary: basePayloadSummary
-        })
-      )
-      const response = await runAiAction({
-        action,
-        content: run.request.content,
-        context: run.request.context,
-        settings: replaySettings,
-        providers: replaySettings.providers,
-        agents: replaySettings.agents,
-        providerId: run.request.providerId,
-        agentId: run.request.agentId,
-        agentSequenceIds: run.request.agentSequenceIds
-      })
-
-      const appliedBlockId = applyAiResult(action, response.content, run.request.targetBlockId)
-      focusAiResult(appliedBlockId)
-      const successPayloadSummary = `${basePayloadSummary} retries=${response.meta.retries}`
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'success',
-          message: `${response.label} 重放完成`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: successPayloadSummary
-        })
-      )
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'agent',
-          status: 'success',
-          message: `Agent 重放完成`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${run.request.agentId || '-'} provider=${run.request.providerId || '-'} action=${action} retries=${response.meta.retries}`
-        })
-      )
-      void persistAiRun({
-        id: createId(),
-        createdAt: new Date().toISOString(),
-        status: 'success',
-        chapterId: run.chapterId ?? activeChapter?.id,
-        action,
-        providerId: run.request.providerId,
-        agentIds: response.agentSequenceIds,
-        request: { ...run.request, agentSequenceIds: response.agentSequenceIds },
-        response: { content: response.content, meta: response.meta }
-      })
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'AI 调用失败'
-      const retryCount =
-        typeof (error as { retries?: number }).retries === 'number' ? (error as { retries: number }).retries : 0
-      const attempts =
-        typeof (error as { attempts?: number }).attempts === 'number'
-          ? (error as { attempts: number }).attempts
-          : retryCount + 1
-      const failurePayloadSummary = `${basePayloadSummary} retries=${retryCount}`
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'ai',
-          status: 'error',
-          message: `AI 重放失败：${message}`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: failurePayloadSummary
-        })
-      )
-      pushLog(
-        createLogEntry({
-          requestId,
-          scope: 'agent',
-          status: 'error',
-          message: `Agent 重放失败：${message}`,
-          durationMs: nowMs() - requestStartedAt,
-          payloadSummary: `agent=${run.request.agentId || '-'} provider=${run.request.providerId || '-'} action=${action} retries=${retryCount}`
-        })
-      )
-      void persistAiRun({
-        id: createId(),
-        createdAt: new Date().toISOString(),
-        status: 'error',
-        chapterId: run.chapterId ?? activeChapter?.id,
-        action,
-        providerId: run.request.providerId,
-        agentIds: run.request.agentSequenceIds,
-        request: run.request,
-        response: { error: message, meta: { retries: retryCount, attempts } }
-      })
-    }
-  }
-
   const handleManualSync = () => {
     if (!activeChapter) return
     const content = editor.document as Block[]
@@ -812,6 +549,21 @@ export const App = () => {
     if (!activeChapter || !previewOpen) return ''
     return getPlainTextFromDoc(editor.document as Block[])
   }, [activeChapter, editor, previewOpen])
+
+  if (authChecking) {
+    return <div className="app-loading" data-testid="auth-loading">正在验证登录...</div>
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AuthPage
+        loading={authBusy}
+        error={authError}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+      />
+    )
+  }
 
   if (loading) {
     return <div className="app-shell">加载中...</div>
@@ -1026,6 +778,9 @@ export const App = () => {
           settings={settings}
           onBack={() => setCurrentPage('editor')}
           onSave={(next: Settings) => updateSettings(next)}
+          authUser={authUser}
+          onLogout={handleLogout}
+          onClearWorkspace={handleClearWorkspace}
         />
       )}
 
